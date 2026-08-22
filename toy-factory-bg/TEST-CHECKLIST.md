@@ -1,0 +1,37 @@
+# First end-to-end test checklist
+
+- [ ] New Shopify store created; no credentials from any other business.
+- [ ] Product `Персонализирана 3D фигурка` created.
+- [ ] Variants are exactly `10 cm`, `15 cm`, `20 cm` with €49 / €69 / €89.
+- [ ] Product is published to the Headless sales channel.
+- [ ] `SHOPIFY_STORE_DOMAIN` is set in Vercel.
+- [ ] `SHOPIFY_STOREFRONT_PRIVATE_TOKEN` is set in Vercel.
+- [ ] `SHOPIFY_PRODUCT_HANDLE` is set in Vercel.
+- [ ] Separate Supabase project created.
+- [ ] `supabase/schema.sql` executed successfully.
+- [ ] `SUPABASE_URL` and server-side `SUPABASE_SERVICE_ROLE_KEY` are set.
+- [ ] Meshy API key is set.
+- [ ] `NEXT_PUBLIC_MOCK_AI=false` for the real test.
+- [ ] `MESHY_PRINT_MAX_COLORS=8`.
+- [ ] `ADMIN_PASSWORD` is set.
+- [ ] `ADMIN_SESSION_SECRET` is at least 32 random characters.
+- [ ] `CRON_SECRET` is set.
+- [ ] Vercel production deployment succeeds.
+- [ ] `/admin` opens and login works.
+- [ ] Shopify `Order payment` webhook points to `/api/shopify/webhooks/orders-paid`.
+- [ ] `SHOPIFY_WEBHOOK_SECRET` is copied to Vercel and deployment is refreshed.
+- [ ] Shopify webhook `Send test` returns 2xx.
+- [ ] Shopify test payment gateway/test mode is enabled.
+- [ ] Upload a real source photo in the storefront.
+- [ ] Meshy preview succeeds.
+- [ ] Approve preview and select `10 cm`.
+- [ ] Shopify Checkout opens at €49.
+- [ ] Complete successful test payment.
+- [ ] `/admin/dashboard` shows the Shopify order.
+- [ ] Project status reaches `3D_GENERATING`.
+- [ ] Project status reaches `PRINT_FILE_GENERATING`.
+- [ ] Project status reaches `READY_FOR_PRINT`.
+- [ ] GLB link opens.
+- [ ] 3MF link downloads.
+- [ ] Outsourced printer can open the 3MF in their slicer.
+- [ ] Update status through PRINTING → PRINTED → PACKED → SHIPPED.
