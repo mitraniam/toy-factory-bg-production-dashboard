@@ -16,8 +16,17 @@ export function projectAssetPath(projectId: string, filename: string) {
   return `${safePathPart(projectId)}/${safePathPart(filename)}`;
 }
 
+function toArrayBuffer(bytes: ArrayBuffer | Uint8Array): ArrayBuffer {
+  if (bytes instanceof ArrayBuffer) return bytes;
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function uploadBytes(path: string, bytes: ArrayBuffer | Uint8Array, contentType: string) {
   const { url, key, bucket } = storageConfig();
+  const body = new Blob([toArrayBuffer(bytes)], { type: contentType });
+
   const upload = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`, {
     method: "POST",
     headers: {
@@ -26,12 +35,12 @@ async function uploadBytes(path: string, bytes: ArrayBuffer | Uint8Array, conten
       "Content-Type": contentType,
       "x-upsert": "true",
     },
-    body: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
+    body,
   });
 
   if (!upload.ok) {
-    const body = await upload.text().catch(() => "");
-    throw new Error(`Could not archive asset to Supabase Storage (${upload.status})${body ? `: ${body}` : ""}`);
+    const responseBody = await upload.text().catch(() => "");
+    throw new Error(`Could not archive asset to Supabase Storage (${upload.status})${responseBody ? `: ${responseBody}` : ""}`);
   }
 
   return path;
