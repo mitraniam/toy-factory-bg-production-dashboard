@@ -1,6 +1,7 @@
 import { createBuild, createMultiColorPrint, createResize, getMultiColorPrint, getResize, getTask } from "@/lib/meshy";
 import { getProject, listProjectsByStatuses, ProjectStatus, ToyProject, updateProject } from "@/lib/projects";
-import { archiveRemoteAsset } from "@/lib/storage";
+import { archiveBytes, archiveRemoteAsset } from "@/lib/storage";
+import { resizeThreeMfToHeight } from "@/lib/three-mf";
 
 function taskError(task: { task_error?: { message?: string } | null }, fallback: string) {
   return task.task_error?.message || fallback;
@@ -20,11 +21,25 @@ async function archiveGlb(project: ToyProject, sourceUrl: string) {
   });
 }
 
-async function archiveThreeMf(project: ToyProject, sourceUrl: string) {
+async function archiveExactSizeThreeMf(project: ToyProject, sourceUrl: string) {
   if (project.three_mf_storage_path) return project.three_mf_storage_path;
-  return archiveRemoteAsset({
+
+  const remote = await fetch(sourceUrl, { cache: "no-store" });
+  if (!remote.ok) throw new Error(`Could not download Meshy 3MF (${remote.status}).`);
+  const sourceBytes = new Uint8Array(await remote.arrayBuffer());
+  const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10);
+
+  console.info("3MF exact-size postprocess", {
     projectId: project.id,
-    sourceUrl,
+    currentHeightMm: resized.currentHeightMm,
+    targetHeightMm: resized.targetHeightMm,
+    scale: resized.scale,
+    vertexCount: resized.vertexCount,
+  });
+
+  return archiveBytes({
+    projectId: project.id,
+    bytes: resized.bytes,
     filename: "model.3mf",
     contentType: "model/3mf",
   });
@@ -137,7 +152,7 @@ export async function syncProject(input: string | ToyProject) {
         });
       }
       try {
-        const threeMfStoragePath = await archiveThreeMf(project, threeMf);
+        const threeMfStoragePath = await archiveExactSizeThreeMf(project, threeMf);
         return updateProject(project.id, {
           status: "READY_FOR_PRINT",
           three_mf_url: threeMf,
@@ -148,7 +163,7 @@ export async function syncProject(input: string | ToyProject) {
         return updateProject(project.id, {
           three_mf_url: threeMf,
           status: "PRINT_FILE_FAILED",
-          last_error: error instanceof Error ? error.message : "3MF archive failed",
+          last_error: error instanceof Error ? error.message : "3MF exact-size archive failed",
         });
       }
     }
