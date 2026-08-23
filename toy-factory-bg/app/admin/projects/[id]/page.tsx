@@ -12,6 +12,7 @@ function date(value?: string | null) {
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "medium", timeStyle: "short", timeZone: "Europe/Sofia" }).format(new Date(value));
 }
 function shortId(id: string) { return id.slice(0, 8).toUpperCase(); }
+function modelLabel(value?: string | null) { return (value || "pop").toUpperCase(); }
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await isAdminAuthenticated())) redirect("/admin");
@@ -19,12 +20,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const project = await getProject(id);
   if (!project) notFound();
   const meta = STATUS_META[project.status];
+  const model = modelLabel(project.model_kind);
 
   return (
     <main className="admin-shell project-shell">
       <div className="project-back"><Link href="/admin/dashboard">← Всички поръчки</Link></div>
       <section className="project-title-row">
-        <div><p className="admin-kicker">PROJECT TF-{shortId(project.id)}</p><h1>{project.shopify_order_name || "Unpaid project"}</h1><p>{project.customer_name || "Клиентът ще се появи след orders/paid"} · {project.size_cm} cm · €{Number(project.price_eur).toFixed(2)}</p></div>
+        <div>
+          <p className="admin-kicker">PROJECT TF-{shortId(project.id)}</p>
+          <h1>{project.shopify_order_name || "Unpaid project"}</h1>
+          <p>{project.customer_name || "Клиентът ще се появи след orders/paid"} · <strong>{model}</strong> · {project.size_cm} cm · €{Number(project.price_eur).toFixed(2)}</p>
+        </div>
         <span className={`status-chip big ${meta.tone}`}>{meta.label}</span>
       </section>
 
@@ -32,9 +38,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <section className="project-grid">
         <div className="project-card preview-card">
-          <div className="project-card-head"><span>Approved preview</span><small>Meshy prototype</small></div>
-          {/* External Meshy asset URL; Next/Image is intentionally avoided. */}
-          <img src={project.preview_url} alt="Approved vinyl figure preview" />
+          <div className="project-card-head"><span>Approved preview</span><small>Meshy {model} prototype</small></div>
+          <img src={project.preview_url} alt={`Approved ${model} figure preview`} />
+          <p className="file-note">Preview фонът е илюстративен и не е част от крайния 3D продукт.</p>
         </div>
 
         <div className="project-card">
@@ -50,6 +56,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <div className="project-card-head"><span>Order details</span><small>Shopify + project data</small></div>
           <dl>
             <div><dt>Project ID</dt><dd>{project.id}</dd></div>
+            <div><dt>Model</dt><dd><strong>{model}</strong></dd></div>
+            <div><dt>Size</dt><dd>{project.size_cm} cm</dd></div>
             <div><dt>Shopify order</dt><dd>{project.shopify_order_name || "—"}</dd></div>
             <div><dt>Customer</dt><dd>{project.customer_name || "—"}</dd></div>
             <div><dt>Email</dt><dd>{project.customer_email || "—"}</dd></div>
