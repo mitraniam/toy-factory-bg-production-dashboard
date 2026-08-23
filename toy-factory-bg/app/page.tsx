@@ -12,7 +12,7 @@ const styles = [
     key: "pop",
     copy: "Класическа колекционерска визия с голяма глава, изчистени форми и силен POP характер.",
     tone: "coral",
-    image: "/marketing/pop-card.webp",
+    image: "/marketing/pop-card.svg",
     badge: "КЛАСИКА",
   },
   {
