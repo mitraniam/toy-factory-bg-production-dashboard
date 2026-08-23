@@ -47,7 +47,7 @@ async function meshyFetch(url: string, init?: RequestInit) {
 export async function createPrototype(kind: ModelKind, imageUrlOrDataUri: string): Promise<string> {
   const data = await meshyFetch(`${creativeLabBase(kind)}/prototype`, {
     method: "POST",
-    body: JSON.stringify({ image_url: imageUrlOrDataUri }),
+    body: JSON.stringify({ image_url: imageUrlOrDataUri, remove_background: true }),
   });
   if (!data?.result) throw new Error("Meshy did not return a prototype task id.");
   return data.result;
