@@ -1,3 +1,9 @@
+export type ModelKind = "pop" | "mini" | "brick";
+
+export function isModelKind(value: unknown): value is ModelKind {
+  return value === "pop" || value === "mini" || value === "brick";
+}
+
 export type ProjectStatus =
   | "CHECKOUT_CREATED"
   | "CHECKOUT_FAILED"
@@ -35,6 +41,7 @@ export type ToyProject = {
   id: string;
   created_at?: string;
   updated_at?: string;
+  model_kind: ModelKind;
   prototype_task_id: string;
   preview_url: string;
   size_cm: number;
