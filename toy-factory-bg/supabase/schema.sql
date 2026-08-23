@@ -26,6 +26,7 @@ create table if not exists public.toy_projects (
   shipping_city text,
 
   build_task_id text,
+  resize_task_id text,
   print_task_id text,
   glb_url text,
   three_mf_url text,
@@ -39,6 +40,7 @@ create table if not exists public.toy_projects (
 alter table public.toy_projects add column if not exists customer_name text;
 alter table public.toy_projects add column if not exists customer_email text;
 alter table public.toy_projects add column if not exists shipping_city text;
+alter table public.toy_projects add column if not exists resize_task_id text;
 alter table public.toy_projects add column if not exists print_task_id text;
 alter table public.toy_projects add column if not exists production_notes text;
 alter table public.toy_projects add column if not exists tracking_number text;
@@ -52,6 +54,7 @@ alter table public.toy_projects add constraint toy_projects_status_check check (
     'PAID_BUILD_STARTING',
     '3D_GENERATING',
     'BUILD_FAILED',
+    'MODEL_RESIZING',
     'PRINT_FILE_GENERATING',
     'PRINT_FILE_FAILED',
     'READY_FOR_PRINT',
