@@ -44,6 +44,7 @@ export type ToyProject = {
   model_kind: ModelKind;
   prototype_task_id: string;
   preview_url: string;
+  preview_storage_path?: string | null;
   size_cm: number;
   price_eur: number;
   status: ProjectStatus;
@@ -59,7 +60,9 @@ export type ToyProject = {
   resize_task_id?: string | null;
   print_task_id?: string | null;
   glb_url?: string | null;
+  glb_storage_path?: string | null;
   three_mf_url?: string | null;
+  three_mf_storage_path?: string | null;
   production_notes?: string | null;
   tracking_number?: string | null;
   last_error?: string | null;
