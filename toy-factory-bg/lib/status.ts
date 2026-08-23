@@ -6,6 +6,7 @@ export const STATUS_META: Record<ProjectStatus, { label: string; tone: string; s
   PAID_BUILD_STARTING: { label: "Paid · starting 3D", tone: "info", stage: "3D" },
   "3D_GENERATING": { label: "3D generating", tone: "info", stage: "3D" },
   BUILD_FAILED: { label: "3D failed", tone: "danger", stage: "3D" },
+  MODEL_RESIZING: { label: "Sizing model", tone: "info", stage: "3D" },
   PRINT_FILE_GENERATING: { label: "Preparing 3MF", tone: "info", stage: "Print file" },
   PRINT_FILE_FAILED: { label: "3MF failed", tone: "danger", stage: "Print file" },
   READY_FOR_PRINT: { label: "Ready for print", tone: "success", stage: "Production" },
