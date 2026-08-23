@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "./popme.css";
+import "./popme-v2.css";
 
 export const metadata: Metadata = {
   title: "POPME — Made of you.",
