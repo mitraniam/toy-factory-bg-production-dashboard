@@ -125,6 +125,18 @@ export async function getProject(id: string) {
   return rows?.[0] || null;
 }
 
+export async function findProjectByTaskId(taskId: string) {
+  const params = new URLSearchParams();
+  params.set("select", "*");
+  params.set(
+    "or",
+    `(prototype_task_id.eq.${taskId},build_task_id.eq.${taskId},resize_task_id.eq.${taskId},print_task_id.eq.${taskId})`
+  );
+  params.set("limit", "1");
+  const rows = (await supabaseRest(`toy_projects?${params.toString()}`, { method: "GET" })) as ToyProject[];
+  return rows?.[0] || null;
+}
+
 export async function listProjects(input: { status?: ProjectStatus; q?: string; limit?: number } = {}) {
   const params = new URLSearchParams();
   params.set("select", "*");
