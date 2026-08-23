@@ -15,6 +15,11 @@ export function getIntegrationChecks(): IntegrationCheck[] {
     (exists("SHOPIFY_PRODUCT_HANDLE") || (exists("SHOPIFY_VARIANT_10CM") && exists("SHOPIFY_VARIANT_15CM") && exists("SHOPIFY_VARIANT_20CM"))) &&
     (exists("SHOPIFY_WEBHOOK_SECRET") || exists("SHOPIFY_APP_CLIENT_SECRET"));
 
+  const meshyWebhookReady =
+    exists("MESHY_API_KEY") &&
+    (exists("MESHY_WEBHOOK_SECRET") || exists("CRON_SECRET")) &&
+    (exists("NEXT_PUBLIC_SITE_URL") || exists("SITE_URL") || exists("VERCEL_PROJECT_PRODUCTION_URL"));
+
   return [
     {
       name: "Supabase",
@@ -38,8 +43,10 @@ export function getIntegrationChecks(): IntegrationCheck[] {
     },
     {
       name: "Auto sync",
-      ok: exists("CRON_SECRET"),
-      detail: "Проверка на Meshy build/3MF задачите",
+      ok: meshyWebhookReady,
+      detail: meshyWebhookReady
+        ? "Meshy webhook придвижва build → resize → 3MF автоматично"
+        : "Липсва Meshy webhook URL/secret конфигурация",
     },
   ];
 }
