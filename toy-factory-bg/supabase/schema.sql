@@ -8,8 +8,10 @@ create table if not exists public.toy_projects (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
+  model_kind text not null default 'pop',
   prototype_task_id text not null,
   preview_url text not null,
+  preview_storage_path text,
   size_cm integer not null check (size_cm in (10, 15, 20)),
   price_eur numeric(10,2) not null check (price_eur >= 0),
 
@@ -29,7 +31,9 @@ create table if not exists public.toy_projects (
   resize_task_id text,
   print_task_id text,
   glb_url text,
+  glb_storage_path text,
   three_mf_url text,
+  three_mf_storage_path text,
 
   production_notes text,
   tracking_number text,
@@ -37,13 +41,22 @@ create table if not exists public.toy_projects (
 );
 
 -- Upgrade columns for an existing MVP database.
+alter table public.toy_projects add column if not exists model_kind text not null default 'pop';
+alter table public.toy_projects add column if not exists preview_storage_path text;
 alter table public.toy_projects add column if not exists customer_name text;
 alter table public.toy_projects add column if not exists customer_email text;
 alter table public.toy_projects add column if not exists shipping_city text;
 alter table public.toy_projects add column if not exists resize_task_id text;
 alter table public.toy_projects add column if not exists print_task_id text;
+alter table public.toy_projects add column if not exists glb_storage_path text;
+alter table public.toy_projects add column if not exists three_mf_storage_path text;
 alter table public.toy_projects add column if not exists production_notes text;
 alter table public.toy_projects add column if not exists tracking_number text;
+
+alter table public.toy_projects drop constraint if exists toy_projects_model_kind_check;
+alter table public.toy_projects add constraint toy_projects_model_kind_check check (
+  model_kind in ('pop', 'mini', 'brick')
+);
 
 -- Replace the old status constraint if it exists.
 alter table public.toy_projects drop constraint if exists toy_projects_status_check;
@@ -75,4 +88,9 @@ create index if not exists toy_projects_shopify_order_idx
 alter table public.toy_projects enable row level security;
 
 comment on table public.toy_projects is
-  'Internal production state for custom 3D figure orders. Server-side service-role access only.';
+  'Internal production state for POPME custom 3D figure orders. Server-side service-role access only.';
+
+-- Private bucket for durable production assets. Service-role uploads files from Meshy.
+insert into storage.buckets (id, name, public)
+values ('toy-assets', 'toy-assets', false)
+on conflict (id) do update set public = false;
