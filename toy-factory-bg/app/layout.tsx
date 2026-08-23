@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Toy Factory BG — Custom 3D Figures",
-  description: "Качи снимка и я превърни в персонализирана 3D фигурка.",
+  title: "POPME — Made of you.",
+  description: "Превърни снимката си в персонализирана POP, MINI или BRICK 3D колекционерска фигурка.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
