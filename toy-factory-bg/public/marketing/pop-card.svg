@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 420" role="img" aria-label="POPME POP фигурка">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff6a68"/><stop offset="1" stop-color="#ff4f5d"/></linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="180%"><feDropShadow dx="0" dy="14" stdDeviation="10" flood-opacity=".22"/></filter>
+  </defs>
+  <rect width="360" height="420" rx="26" fill="url(#bg)"/>
+  <g filter="url(#shadow)" transform="translate(0 4)">
+    <ellipse cx="180" cy="364" rx="92" ry="24" fill="#121316"/>
+    <rect x="108" y="334" width="144" height="33" rx="13" fill="#202126"/>
+    <text x="180" y="356" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="14" fill="#fff">popme.</text>
+    <rect x="123" y="236" width="114" height="104" rx="30" fill="#111216"/>
+    <rect x="130" y="302" width="42" height="45" rx="14" fill="#0c0d10"/>
+    <rect x="188" y="302" width="42" height="45" rx="14" fill="#0c0d10"/>
+    <ellipse cx="151" cy="345" rx="31" ry="13" fill="#fff7ee"/>
+    <ellipse cx="209" cy="345" rx="31" ry="13" fill="#fff7ee"/>
+    <circle cx="180" cy="172" r="94" fill="#f2c19a"/>
+    <path d="M88 164c0-69 40-112 94-112 56 0 94 44 94 111-20-22-42-31-62-34-15 16-41 24-78 24-17 0-33-3-48-9z" fill="#5b2d20"/>
+    <path d="M91 133c16-56 54-82 94-82 43 0 79 29 90 82-18-19-41-29-63-31-15 13-42 21-73 21-18 0-34-3-48-9z" fill="#6f3827"/>
+    <ellipse cx="145" cy="183" rx="18" ry="24" fill="#111216"/>
+    <ellipse cx="215" cy="183" rx="18" ry="24" fill="#111216"/>
+    <circle cx="139" cy="176" r="5" fill="#fff" opacity=".9"/>
+    <circle cx="209" cy="176" r="5" fill="#fff" opacity=".9"/>
+    <path d="M158 222c13 10 31 10 44 0" fill="none" stroke="#a24f46" stroke-width="6" stroke-linecap="round"/>
+    <path d="M128 268c25-11 79-11 104 0" fill="none" stroke="#2b2c31" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+  </g>
+  <path d="M57 220l-28 12M67 251l-24 24M296 216l29 9M293 250l23 26" stroke="#111216" stroke-width="5" stroke-linecap="round"/>
+</svg>
