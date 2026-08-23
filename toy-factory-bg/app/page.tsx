@@ -1,29 +1,35 @@
 import ToyBuilder from "@/components/toy-builder";
 
+const priceTiers = [
+  { size: "10 cm", now: "€49", regular: "€59" },
+  { size: "15 cm", now: "€69", regular: "€89" },
+  { size: "20 cm", now: "€89", regular: "€119" },
+];
+
 const styles = [
   {
     name: "POP",
     key: "pop",
-    copy: "Графична vinyl визия с голяма глава, смели черти и силен collectible характер.",
+    copy: "Класическа колекционерска визия с голяма глава, изчистени форми и силен POP характер.",
     tone: "coral",
-    image: "/marketing/pop.svg",
-    price: "€49",
+    image: "/marketing/pop-card.webp",
+    badge: "КЛАСИКА",
   },
   {
     name: "MINI",
     key: "mini",
-    copy: "По-мека chibi интерпретация с човешки силует, повече детайл и много характер.",
+    copy: "По-фина chibi визия с по-човешки пропорции, повече детайл и много характер.",
     tone: "blue",
     image: "/marketing/mini.svg",
-    price: "€49",
+    badge: "НАЙ-ПОПУЛЯРЕН",
   },
   {
     name: "BRICK",
     key: "brick",
-    copy: "Твоята снимка, превърната в playful brick-style колекционерска фигурка.",
+    copy: "Геометрична brick-style версия на теб — минималистична, забавна и разпознаваема.",
     tone: "lime",
     image: "/marketing/brick.svg",
-    price: "€49",
+    badge: "МОДЕРЕН",
   },
 ];
 
@@ -52,22 +58,25 @@ export default function Home() {
 
       <section className="popme-hero">
         <div className="popme-hero-copy">
-          <div className="launch-pill">СТАРТОВА ОФЕРТА · −25%</div>
-          <p className="popme-tag">MADE OF YOU.</p>
+          <div className="launch-pill">🔥 СТАРТОВИ ЦЕНИ · СПЕСТИ ДО 25%</div>
+          <p className="popme-tag">СНИМКА → 3D → ТВОЯ ФИГУРКА</p>
           <h1>ТИ.<br />КАТО 3D<br />ФИГУРКА.</h1>
-          <p className="popme-hero-text">Качи снимка, избери POP, MINI или BRICK и виж персонализираната си 3D фигурка още преди да поръчаш.</p>
+          <p className="popme-hero-text">POP, MINI или BRICK — твоята снимка, твоят стил, истинска фигурка. Първо виждаш визуализацията. После решаваш.</p>
           <div className="popme-hero-actions">
             <a className="popme-primary" href="#create">НАПРАВИ МЕ 3D <span>→</span></a>
-            <a className="popme-secondary" href="#how">Виж как работи</a>
+            <a className="popme-secondary" href="#styles">Виж стиловете</a>
           </div>
-          <div className="popme-price-strip"><strong>ОТ €49</strong><span>10 / 15 / 20 cm · preview преди плащане</span></div>
+          <div className="popme-price-strip">
+            <strong>ОТ €49</strong><del>редовна €59</del>
+            <span>Стартова цена · визуализация преди плащане</span>
+          </div>
         </div>
 
         <div className="hero-products" aria-label="POPME стилове">
           {styles.map((style) => (
             <a className={`hero-product ${style.tone}`} href={`/?style=${style.key}#create`} key={style.name}>
-              <span>{style.name}</span>
               <img src={style.image} alt={`${style.name} примерна POPME фигурка`} />
+              <span>{style.name}</span>
             </a>
           ))}
           <div className="hero-note">ТВОЯТА СНИМКА → ТВОЯТА ФИГУРКА</div>
@@ -75,59 +84,71 @@ export default function Home() {
       </section>
 
       <section className="popme-benefit-strip">
-        <div><b>01</b><strong>Качи снимка</strong><span>JPG, PNG или WEBP</span></div>
-        <div><b>02</b><strong>AI визуализация</strong><span>Виж стила преди поръчка</span></div>
-        <div><b>03</b><strong>Персонализация</strong><span>3 стила · 3 размера</span></div>
-        <div><b>04</b><strong>3D производство</strong><span>Подготвяме модела за печат</span></div>
-        <div><b>05</b><strong>Единствена по рода си</strong><span>Направена по твоя снимка</span></div>
+        <div><b>01</b><strong>Качи себе си</strong><span>1 добра снимка е достатъчна</span></div>
+        <div><b>02</b><strong>Виж се като фигурка</strong><span>POP, MINI или BRICK</span></div>
+        <div><b>03</b><strong>Избери своя стил</strong><span>3 стила · 3 размера</span></div>
+        <div><b>04</b><strong>Ние я правим реална</strong><span>3D модел → печат</span></div>
+        <div><b>05</b><strong>Разопаковай магията</strong><span>Единствена. Точно като теб.</span></div>
       </section>
 
       <section className="popme-styles" id="styles">
         <div className="popme-section-head split-head">
-          <div><p>ИЗБЕРИ СВОЯ ХАРАКТЕР</p><h2>Три начина<br />да бъдеш ти.</h2></div>
-          <div className="offer-copy"><strong>−25%</strong><span>стартова оферта върху текущите цени</span></div>
+          <div><p>ИЗБЕРИ СВОЯ СТИЛ</p><h2>Три начина<br />да бъдеш ти.</h2></div>
+          <div className="offer-copy"><span>СТАРТОВИ ЦЕНИ</span><strong>ДО −25%</strong><small>спрямо редовните цени след стартовия период</small></div>
         </div>
+
         <div className="popme-style-grid" id="prices">
           {styles.map((style, index) => (
             <article className={`popme-style-card ${style.tone}`} key={style.name}>
-              <div className="popme-style-top"><span>0{index + 1}</span><strong>{style.name}</strong></div>
+              <div className="popme-style-top"><span>0{index + 1}</span><strong>{style.name}</strong><em>{style.badge}</em></div>
               <img className="style-product-image" src={style.image} alt={`${style.name} стил`} />
               <p>{style.copy}</p>
-              <div className="style-price"><span>СТАРТОВА ЦЕНА</span><strong>от {style.price}</strong><small>10 / 15 / 20 cm</small></div>
+              <div className="card-price-list" aria-label={`${style.name} цени`}>
+                {priceTiers.map((tier) => (
+                  <div key={tier.size}><span>{tier.size}</span><strong>{tier.now}</strong><del>{tier.regular}</del></div>
+                ))}
+              </div>
               <a className="style-cta" href={`/?style=${style.key}#create`}>ИЗБЕРИ {style.name} →</a>
             </article>
           ))}
         </div>
+        <p className="price-clarifier">Стартовите цени са временни. Зачеркнатите стойности са планираните редовни цени след стартовия период.</p>
       </section>
 
       <section className="popme-how" id="how">
-        <div className="popme-section-head inverted"><p>ОТ СНИМКА ДО ФИГУРКА</p><h2>Лесно като<br />1 — 2 — 3.</h2></div>
+        <div className="popme-section-head inverted"><p>ОТ СНИМКА ДО ФИГУРКА</p><h2>Лесно.<br />Бързо. Вълнуващо.</h2></div>
         <div className="popme-how-grid">
-          <article><span>01</span><h3>Качи снимка</h3><p>Избери снимка с ясно лице и добра светлина. Ние я подготвяме за AI визуализация.</p></article>
-          <article><span>02</span><h3>Виж себе си в 3D стил</h3><p>Избираш POP, MINI или BRICK, преглеждаш preview-а и можеш да генерираш отново.</p></article>
-          <article><span>03</span><h3>Одобри и поръчай</h3><p>Избираш размер, плащаш сигурно през Shopify и тогава стартираме истинския 3D модел.</p></article>
+          <article><span>01</span><h3>Качи снимка</h3><p>Избираш ясна снимка с добро осветление. Това е всичко, което ни трябва, за да започнем.</p></article>
+          <article><span>02</span><h3>Виж AI визуализация</h3><p>Получаваш своя POP, MINI или BRICK вариант и избираш този, който най-много прилича на теб.</p></article>
+          <article><span>03</span><h3>Одобри и поръчай</h3><p>Едва след одобрението избираш размер и плащаш. Ние превръщаме визията в истинска 3D фигурка.</p></article>
         </div>
       </section>
 
-      <section className="popme-proof-section">
-        <div className="popme-section-head"><p>ПЪРВИТЕ POPME ИСТОРИИ</p><h2>Преди да стане<br />истинска фигурка.</h2></div>
-        <div className="proof-grid">
-          {styles.map((style) => (
-            <article key={style.name}>
-              <img src={style.image} alt={`Тестова ${style.name} визуализация`} />
-              <div><strong>{style.name}</strong><span>Тестова визуализация</span></div>
-            </article>
-          ))}
+      <section className="preview-first-section">
+        <div className="preview-first-visual">
+          <div className="preview-ticket">НЕ ПЛАЩАШ НА СЛЯПО</div>
+          <img src="/marketing/mini.svg" alt="Примерна MINI визуализация преди плащане" />
+          <span>AI ВИЗУАЛИЗАЦИЯ</span>
         </div>
-        <p className="proof-note">Това са тестови POPME визуализации. Реални клиентски отзиви ще публикуваме след първите доставки.</p>
+        <div className="preview-first-copy">
+          <p>ПЪРВО ВИЖДАШ</p>
+          <h2>Харесай я.<br />После я поръчай.</h2>
+          <p className="preview-intro">Преди да платиш, виждаш как ще изглежда твоят стил. Ако не е твоето — генерираш отново.</p>
+          <div className="preview-checks">
+            <div><b>01</b><span><strong>Избираш стил</strong>POP, MINI или BRICK</span></div>
+            <div><b>02</b><span><strong>Виждаш визуализация</strong>преди да дадеш и 1 евро</span></div>
+            <div><b>03</b><span><strong>Одобряваш</strong>и чак тогава продължаваш към поръчка</span></div>
+          </div>
+          <a href="#create">ВИЖ МЕ КАТО ФИГУРКА →</a>
+        </div>
       </section>
 
       <ToyBuilder />
 
       <section className="popme-facts">
-        <div><strong>10 / 15 / 20</strong><span>CM · ТРИ РАЗМЕРА</span></div>
-        <div><strong>ONE OF ONE</strong><span>НАПРАВЕНА ПО ПОРЪЧКА</span></div>
-        <div><strong>ТИ → 3D</strong><span>MADE OF YOU.</span></div>
+        <div className="fact-size"><span>3 РАЗМЕРА</span><strong>10 · 15 · 20 CM</strong><p>Малка. Средна. WOW.</p></div>
+        <div className="fact-one"><span>ЕДИНСТВЕНА</span><strong>ONE OF ONE</strong><p>Няма две еднакви POPME фигурки.</p></div>
+        <div className="fact-transform"><span>ТИ → POPME</span><strong>ЛИЦЕ → СТИЛ → 3D</strong><p>От една снимка до истинска фигурка.</p></div>
       </section>
 
       <section className="popme-faq" id="faq">
@@ -140,8 +161,8 @@ export default function Home() {
       </section>
 
       <section className="popme-final-cta">
-        <div><p>ГОТОВ ЛИ СИ?</p><h2>Една снимка.<br />Една единствена фигурка.</h2></div>
-        <div className="final-offer"><span>СТАРТОВА ОФЕРТА</span><strong>−25%</strong><small>цени от €49</small></div>
+        <div><p>ГОТОВ ЛИ СИ?</p><h2>Една снимка.<br />Една уникална фигурка.</h2></div>
+        <div className="final-offer"><span>СТАРТОВИ ЦЕНИ</span><strong>от €49</strong><small>редовна от €59 · спести до 25%</small></div>
         <a href="#create">НАПРАВИ МЕ 3D →</a>
       </section>
 
