@@ -1,8 +1,12 @@
-import { createBuild, createMultiColorPrint, getMultiColorPrint, getTask } from "@/lib/meshy";
+import { createBuild, createMultiColorPrint, createResize, getMultiColorPrint, getResize, getTask } from "@/lib/meshy";
 import { getProject, listProjectsByStatuses, ProjectStatus, ToyProject, updateProject } from "@/lib/projects";
 
 function taskError(task: { task_error?: { message?: string } | null }, fallback: string) {
   return task.task_error?.message || fallback;
+}
+
+function failed(status: string) {
+  return status === "FAILED" || status === "EXPIRED" || status === "CANCELED";
 }
 
 export async function syncProject(input: string | ToyProject) {
@@ -27,7 +31,7 @@ export async function syncProject(input: string | ToyProject) {
 
   if (project.status === "3D_GENERATING" && project.build_task_id) {
     const task = await getTask("build", project.build_task_id);
-    if (task.status === "FAILED" || task.status === "EXPIRED") {
+    if (failed(task.status)) {
       return updateProject(project.id, {
         status: "BUILD_FAILED",
         last_error: taskError(task, `Build ${task.status.toLowerCase()}`),
@@ -42,16 +46,50 @@ export async function syncProject(input: string | ToyProject) {
         });
       }
       try {
-        const printTaskId = await createMultiColorPrint(glbUrl);
+        const resizeTaskId = await createResize(glbUrl, project.size_cm);
         project = (await updateProject(project.id, {
           glb_url: glbUrl,
+          resize_task_id: resizeTaskId,
+          status: "MODEL_RESIZING",
+          last_error: null,
+        })) || project;
+      } catch (error) {
+        return updateProject(project.id, {
+          glb_url: glbUrl,
+          status: "PRINT_FILE_FAILED",
+          last_error: error instanceof Error ? error.message : "Resize task failed to start",
+        });
+      }
+    }
+  }
+
+  if (project.status === "MODEL_RESIZING" && project.resize_task_id) {
+    const task = await getResize(project.resize_task_id);
+    if (failed(task.status)) {
+      return updateProject(project.id, {
+        status: "PRINT_FILE_FAILED",
+        last_error: taskError(task, `Resize ${task.status.toLowerCase()}`),
+      });
+    }
+    if (task.status === "SUCCEEDED") {
+      const resizedGlb = task.model_urls?.glb;
+      if (!resizedGlb) {
+        return updateProject(project.id, {
+          status: "PRINT_FILE_FAILED",
+          last_error: "Meshy resize succeeded but no GLB URL was returned.",
+        });
+      }
+      try {
+        const printTaskId = await createMultiColorPrint(resizedGlb);
+        project = (await updateProject(project.id, {
+          glb_url: resizedGlb,
           print_task_id: printTaskId,
           status: "PRINT_FILE_GENERATING",
           last_error: null,
         })) || project;
       } catch (error) {
         return updateProject(project.id, {
-          glb_url: glbUrl,
+          glb_url: resizedGlb,
           status: "PRINT_FILE_FAILED",
           last_error: error instanceof Error ? error.message : "3MF task failed to start",
         });
@@ -61,7 +99,7 @@ export async function syncProject(input: string | ToyProject) {
 
   if (project.status === "PRINT_FILE_GENERATING" && project.print_task_id) {
     const task = await getMultiColorPrint(project.print_task_id);
-    if (task.status === "FAILED" || task.status === "EXPIRED") {
+    if (failed(task.status)) {
       return updateProject(project.id, {
         status: "PRINT_FILE_FAILED",
         last_error: taskError(task, `3MF task ${task.status.toLowerCase()}`),
@@ -87,7 +125,7 @@ export async function syncProject(input: string | ToyProject) {
 }
 
 export async function syncActiveProjects(limit = 40) {
-  const active: ProjectStatus[] = ["PAID_BUILD_STARTING", "3D_GENERATING", "PRINT_FILE_GENERATING"];
+  const active: ProjectStatus[] = ["PAID_BUILD_STARTING", "3D_GENERATING", "MODEL_RESIZING", "PRINT_FILE_GENERATING"];
   const projects = await listProjectsByStatuses(active, limit);
   const results: Array<{ id: string; ok: boolean; status?: string; error?: string }> = [];
   for (const project of projects) {
@@ -109,6 +147,7 @@ export async function retryProject(project: ToyProject) {
     return updateProject(project.id, {
       status: "3D_GENERATING",
       build_task_id: buildTaskId,
+      resize_task_id: null,
       print_task_id: null,
       three_mf_url: null,
       last_error: null,
@@ -116,10 +155,11 @@ export async function retryProject(project: ToyProject) {
   }
   if (project.status === "PRINT_FILE_FAILED") {
     if (!project.glb_url) throw new Error("GLB URL is missing; retry the 3D build instead.");
-    const printTaskId = await createMultiColorPrint(project.glb_url);
+    const resizeTaskId = await createResize(project.glb_url, project.size_cm);
     return updateProject(project.id, {
-      status: "PRINT_FILE_GENERATING",
-      print_task_id: printTaskId,
+      status: "MODEL_RESIZING",
+      resize_task_id: resizeTaskId,
+      print_task_id: null,
       three_mf_url: null,
       last_error: null,
     });
