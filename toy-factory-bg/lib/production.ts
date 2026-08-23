@@ -15,7 +15,7 @@ export async function syncProject(input: string | ToyProject) {
 
   if (project.status === "PAID_BUILD_STARTING") {
     try {
-      const buildTaskId = await createBuild(project.prototype_task_id);
+      const buildTaskId = await createBuild(project.model_kind || "pop", project.prototype_task_id);
       project = (await updateProject(project.id, {
         status: "3D_GENERATING",
         build_task_id: buildTaskId,
@@ -30,7 +30,7 @@ export async function syncProject(input: string | ToyProject) {
   }
 
   if (project.status === "3D_GENERATING" && project.build_task_id) {
-    const task = await getTask("build", project.build_task_id);
+    const task = await getTask(project.model_kind || "pop", "build", project.build_task_id);
     if (failed(task.status)) {
       return updateProject(project.id, {
         status: "BUILD_FAILED",
@@ -143,7 +143,7 @@ export async function syncActiveProjects(limit = 40) {
 
 export async function retryProject(project: ToyProject) {
   if (project.status === "BUILD_FAILED") {
-    const buildTaskId = await createBuild(project.prototype_task_id);
+    const buildTaskId = await createBuild(project.model_kind || "pop", project.prototype_task_id);
     return updateProject(project.id, {
       status: "3D_GENERATING",
       build_task_id: buildTaskId,
