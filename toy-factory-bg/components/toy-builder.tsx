@@ -39,6 +39,10 @@ const MODEL_COPY: Record<ModelKind, { title: string; text: string }> = {
   },
 };
 
+function isModelKind(value: string | null): value is ModelKind {
+  return value === "pop" || value === "mini" || value === "brick";
+}
+
 function prepareImage(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -95,6 +99,11 @@ export default function ToyBuilder() {
   }, [size]);
 
   useEffect(() => {
+    const selected = new URLSearchParams(window.location.search).get("style");
+    if (isModelKind(selected)) setModelKind(selected);
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (sourceImage?.startsWith("blob:")) URL.revokeObjectURL(sourceImage);
     };
@@ -106,6 +115,9 @@ export default function ToyBuilder() {
     setPrototypeTaskId(null);
     setRegenerations(0);
     setError(null);
+    const url = new URL(window.location.href);
+    url.searchParams.set("style", value);
+    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   async function acceptFile(file?: File) {
@@ -249,9 +261,9 @@ export default function ToyBuilder() {
   return (
     <section className="builder-shell" id="create">
       <div className="builder-header">
-        <p className="eyebrow">CUSTOM 3D FIGURE</p>
+        <p className="eyebrow">CUSTOM 3D COLLECTIBLE</p>
         <h2>Избери стил. Качи снимка. Виж фигурката си.</h2>
-        <p className="subtle">POP, MINI или BRICK — първо виждаш визуализацията, а 3D моделът се генерира след поръчка.</p>
+        <p className="subtle">POP, MINI или BRICK — preview преди плащане, производство след поръчка.</p>
       </div>
 
       <div className="builder-card">
@@ -291,12 +303,12 @@ export default function ToyBuilder() {
             <div className="control-panel">
               <div>
                 <p className="control-label">Избери стил</p>
-                <div className="size-options">
+                <div className="size-options model-options">
                   {MODEL_OPTIONS.map((option) => (
                     <button
                       type="button"
                       key={option.value}
-                      className={modelKind === option.value ? "size active" : "size"}
+                      className={modelKind === option.value ? `size active model-${option.value}` : `size model-${option.value}`}
                       onClick={() => chooseModelKind(option.value)}
                     >
                       <strong>{option.name}</strong><span>{option.subtitle}</span>
@@ -310,6 +322,8 @@ export default function ToyBuilder() {
                 <h3>{MODEL_COPY[modelKind].title}</h3>
                 <p>{MODEL_COPY[modelKind].text}</p>
               </div>
+
+              <div className="builder-price-note"><strong>От €49</strong><span>Preview преди плащане · 10 / 15 / 20 cm</span></div>
 
               <label className="consent-row">
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
@@ -348,6 +362,7 @@ export default function ToyBuilder() {
                 <p className="control-label">Харесва ли ти?</p>
                 <h3>Това е визията за твоята {modelKind.toUpperCase()} фигурка.</h3>
                 <p>След плащането от тази одобрена визуализация ще генерираме истинския 3D модел за производство.</p>
+                <p className="preview-disclaimer">Фонът/декорът във визуализацията е илюстративен и не е част от крайния 3D продукт.</p>
               </div>
               <button className="primary-button" onClick={() => setStep("order")}>Да, продължаваме</button>
               <button className="secondary-button" onClick={() => generatePreview(true)} disabled={regenerations >= MAX_REGENERATIONS}>Генерирай отново ({MAX_REGENERATIONS - regenerations} останали)</button>
