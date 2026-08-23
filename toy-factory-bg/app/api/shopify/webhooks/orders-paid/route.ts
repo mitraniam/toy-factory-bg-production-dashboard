@@ -73,7 +73,6 @@ export async function POST(request: NextRequest) {
 
   const projectIds = projectIdsFromOrder(order);
   if (!projectIds.length) {
-    // A paid Shopify order unrelated to our custom-figure product.
     return new NextResponse("No toy projects", { status: 200 });
   }
 
@@ -102,11 +101,10 @@ export async function POST(request: NextRequest) {
         shipping_city: order.shipping_address?.city || null,
       });
 
-      // Duplicate webhook or a project already being/been processed.
       if (!claimed) continue;
 
       try {
-        const buildTaskId = await createBuild(claimed.prototype_task_id);
+        const buildTaskId = await createBuild(claimed.model_kind || "pop", claimed.prototype_task_id);
         await updateProject(projectId, {
           status: "3D_GENERATING",
           build_task_id: buildTaskId,
@@ -127,8 +125,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Once the paid order is safely recorded in Supabase, build failures are recovered
-  // from the production dashboard. Returning 2xx avoids pointless Shopify retries.
   if (failures.length) console.error("orders/paid processing failures", failures);
   return new NextResponse(failures.length ? "Recorded with production errors" : "OK", { status: 200 });
 }
