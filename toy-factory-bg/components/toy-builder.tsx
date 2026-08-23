@@ -273,7 +273,7 @@ export default function ToyBuilder() {
 
               {error && <div className="error-box">{error}</div>}
 
-              <button className="primary-button" disabled={!sourceImage || !consent} onClick={generatePreview}>
+              <button className="primary-button" disabled={!sourceImage || !consent} onClick={() => generatePreview()}>
                 Генерирай визуализация
               </button>
               {mockMode && <p className="dev-note">DEV MODE: AI е симулиран и не харчи credits.</p>}
