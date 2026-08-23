@@ -1,5 +1,6 @@
 import { createBuild, createMultiColorPrint, createResize, getMultiColorPrint, getResize, getTask } from "@/lib/meshy";
 import { getProject, listProjectsByStatuses, ProjectStatus, ToyProject, updateProject } from "@/lib/projects";
+import { archiveRemoteAsset } from "@/lib/storage";
 
 function taskError(task: { task_error?: { message?: string } | null }, fallback: string) {
   return task.task_error?.message || fallback;
@@ -7,6 +8,26 @@ function taskError(task: { task_error?: { message?: string } | null }, fallback:
 
 function failed(status: string) {
   return status === "FAILED" || status === "EXPIRED" || status === "CANCELED";
+}
+
+async function archiveGlb(project: ToyProject, sourceUrl: string) {
+  if (project.glb_storage_path) return project.glb_storage_path;
+  return archiveRemoteAsset({
+    projectId: project.id,
+    sourceUrl,
+    filename: "model.glb",
+    contentType: "model/gltf-binary",
+  });
+}
+
+async function archiveThreeMf(project: ToyProject, sourceUrl: string) {
+  if (project.three_mf_storage_path) return project.three_mf_storage_path;
+  return archiveRemoteAsset({
+    projectId: project.id,
+    sourceUrl,
+    filename: "model.3mf",
+    contentType: "model/3mf",
+  });
 }
 
 export async function syncProject(input: string | ToyProject) {
@@ -80,9 +101,11 @@ export async function syncProject(input: string | ToyProject) {
         });
       }
       try {
+        const glbStoragePath = await archiveGlb(project, resizedGlb);
         const printTaskId = await createMultiColorPrint(resizedGlb);
         project = (await updateProject(project.id, {
           glb_url: resizedGlb,
+          glb_storage_path: glbStoragePath,
           print_task_id: printTaskId,
           status: "PRINT_FILE_GENERATING",
           last_error: null,
@@ -91,7 +114,7 @@ export async function syncProject(input: string | ToyProject) {
         return updateProject(project.id, {
           glb_url: resizedGlb,
           status: "PRINT_FILE_FAILED",
-          last_error: error instanceof Error ? error.message : "3MF task failed to start",
+          last_error: error instanceof Error ? error.message : "GLB archive or 3MF task failed to start",
         });
       }
     }
@@ -113,11 +136,21 @@ export async function syncProject(input: string | ToyProject) {
           last_error: "Meshy print task succeeded but no 3MF URL was returned.",
         });
       }
-      return updateProject(project.id, {
-        status: "READY_FOR_PRINT",
-        three_mf_url: threeMf,
-        last_error: null,
-      });
+      try {
+        const threeMfStoragePath = await archiveThreeMf(project, threeMf);
+        return updateProject(project.id, {
+          status: "READY_FOR_PRINT",
+          three_mf_url: threeMf,
+          three_mf_storage_path: threeMfStoragePath,
+          last_error: null,
+        });
+      } catch (error) {
+        return updateProject(project.id, {
+          three_mf_url: threeMf,
+          status: "PRINT_FILE_FAILED",
+          last_error: error instanceof Error ? error.message : "3MF archive failed",
+        });
+      }
     }
   }
 
@@ -150,6 +183,7 @@ export async function retryProject(project: ToyProject) {
       resize_task_id: null,
       print_task_id: null,
       three_mf_url: null,
+      three_mf_storage_path: null,
       last_error: null,
     });
   }
@@ -161,6 +195,7 @@ export async function retryProject(project: ToyProject) {
       resize_task_id: resizeTaskId,
       print_task_id: null,
       three_mf_url: null,
+      three_mf_storage_path: null,
       last_error: null,
     });
   }
