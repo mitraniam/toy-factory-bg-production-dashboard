@@ -3,6 +3,7 @@
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type Step = "upload" | "generating" | "preview" | "order";
+type ModelKind = "pop" | "mini" | "brick";
 
 type PrototypeTask = {
   id?: string;
@@ -16,6 +17,27 @@ type PrototypeTask = {
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_REGENERATIONS = 2;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+
+const MODEL_OPTIONS: Array<{ value: ModelKind; name: string; subtitle: string }> = [
+  { value: "pop", name: "POP", subtitle: "Vinyl collectible" },
+  { value: "mini", name: "MINI", subtitle: "Chibi figure" },
+  { value: "brick", name: "BRICK", subtitle: "Brick-style figure" },
+];
+
+const MODEL_COPY: Record<ModelKind, { title: string; text: string }> = {
+  pop: {
+    title: "Колекционерска POP фигурка",
+    text: "Vinyl визия с по-голяма глава и опростени форми, подходяща за многоцветен 3D печат.",
+  },
+  mini: {
+    title: "Колекционерска MINI фигурка",
+    text: "Chibi визия с по-мек, човешки силует и характерни пропорции.",
+  },
+  brick: {
+    title: "Колекционерска BRICK фигурка",
+    text: "Персонализирана brick-style версия, създадена по твоята снимка.",
+  },
+};
 
 function prepareImage(file: File) {
   return new Promise<string>((resolve, reject) => {
@@ -52,6 +74,7 @@ function sleep(ms: number) {
 export default function ToyBuilder() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [step, setStep] = useState<Step>("upload");
+  const [modelKind, setModelKind] = useState<ModelKind>("pop");
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [prototypeTaskId, setPrototypeTaskId] = useState<string | null>(null);
@@ -76,6 +99,14 @@ export default function ToyBuilder() {
       if (sourceImage?.startsWith("blob:")) URL.revokeObjectURL(sourceImage);
     };
   }, [sourceImage]);
+
+  function chooseModelKind(value: ModelKind) {
+    setModelKind(value);
+    setPreviewImage(null);
+    setPrototypeTaskId(null);
+    setRegenerations(0);
+    setError(null);
+  }
 
   async function acceptFile(file?: File) {
     setError(null);
@@ -126,7 +157,6 @@ export default function ToyBuilder() {
           await sleep(260);
           setProgress(p);
         }
-        // In mock mode we reuse the source photo only to exercise the product flow.
         setPreviewImage(sourceImage);
         setPrototypeTaskId("mock-prototype-task");
         setStep("preview");
@@ -136,7 +166,7 @@ export default function ToyBuilder() {
       const response = await fetch("/api/meshy/prototype", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: sourceImage }),
+        body: JSON.stringify({ image: sourceImage, modelKind }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Не успяхме да стартираме генерацията.");
@@ -145,7 +175,7 @@ export default function ToyBuilder() {
 
       for (let attempt = 0; attempt < 90; attempt += 1) {
         await sleep(2000);
-        const taskResponse = await fetch(`/api/meshy/task/prototype/${data.taskId}`, {
+        const taskResponse = await fetch(`/api/meshy/task/prototype/${data.taskId}?modelKind=${modelKind}`, {
           cache: "no-store",
         });
         const task: PrototypeTask = await taskResponse.json();
@@ -187,7 +217,7 @@ export default function ToyBuilder() {
         body: JSON.stringify({
           prototypeTaskId,
           size,
-          // Used only in local mock-AI mode. Production derives preview from Meshy.
+          modelKind,
           previewImage: mockMode ? previewImage : undefined,
         }),
       });
@@ -220,13 +250,13 @@ export default function ToyBuilder() {
     <section className="builder-shell" id="create">
       <div className="builder-header">
         <p className="eyebrow">CUSTOM 3D FIGURE</p>
-        <h2>Качи снимка. Виж фигурката си.</h2>
-        <p className="subtle">Първо правим визуализация. 3D моделът се генерира чак след поръчка.</p>
+        <h2>Избери стил. Качи снимка. Виж фигурката си.</h2>
+        <p className="subtle">POP, MINI или BRICK — първо виждаш визуализацията, а 3D моделът се генерира след поръчка.</p>
       </div>
 
       <div className="builder-card">
         <div className="steps" aria-label="Стъпки">
-          <span className={step === "upload" ? "active" : "done"}>1. Снимка</span>
+          <span className={step === "upload" ? "active" : "done"}>1. Стил + снимка</span>
           <span className={step === "generating" ? "active" : step === "preview" || step === "order" ? "done" : ""}>2. Визуализация</span>
           <span className={step === "order" ? "active" : ""}>3. Поръчка</span>
         </div>
@@ -246,7 +276,6 @@ export default function ToyBuilder() {
               >
                 <input ref={inputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={handleInput} />
                 {sourceImage ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img className="source-preview" src={sourceImage} alt="Качена снимка" />
                 ) : (
                   <div className="dropzone-copy">
@@ -261,9 +290,25 @@ export default function ToyBuilder() {
 
             <div className="control-panel">
               <div>
+                <p className="control-label">Избери стил</p>
+                <div className="size-options">
+                  {MODEL_OPTIONS.map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      className={modelKind === option.value ? "size active" : "size"}
+                      onClick={() => chooseModelKind(option.value)}
+                    >
+                      <strong>{option.name}</strong><span>{option.subtitle}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
                 <p className="control-label">Какво ще направим</p>
-                <h3>Колекционерска vinyl фигурка</h3>
-                <p>Голяма глава, опростени форми и цветове, подходящи за последващ многоцветен 3D печат.</p>
+                <h3>{MODEL_COPY[modelKind].title}</h3>
+                <p>{MODEL_COPY[modelKind].text}</p>
               </div>
 
               <label className="consent-row">
@@ -274,7 +319,7 @@ export default function ToyBuilder() {
               {error && <div className="error-box">{error}</div>}
 
               <button className="primary-button" disabled={!sourceImage || !consent} onClick={() => generatePreview()}>
-                Генерирай визуализация
+                Генерирай {modelKind.toUpperCase()} визуализация
               </button>
               {mockMode && <p className="dev-note">DEV MODE: AI е симулиран и не харчи credits.</p>}
             </div>
@@ -284,7 +329,7 @@ export default function ToyBuilder() {
         {step === "generating" && (
           <div className="generating-panel">
             <div className="spinner" />
-            <h3>Правим твоята фигурка…</h3>
+            <h3>Правим твоята {modelKind.toUpperCase()} фигурка…</h3>
             <p>Анализираме снимката и създаваме първата визуализация.</p>
             <div className="progress-track"><div className="progress-bar" style={{ width: `${Math.min(progress, 100)}%` }} /></div>
             <strong>{Math.round(progress)}%</strong>
@@ -294,22 +339,14 @@ export default function ToyBuilder() {
         {step === "preview" && previewImage && (
           <div className="panel-grid preview-grid">
             <div className="comparison">
-              <div>
-                <span>Твоята снимка</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={sourceImage || ""} alt="Оригинална снимка" />
-              </div>
-              <div>
-                <span>Визуализация</span>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={previewImage} alt="AI визуализация на фигурка" />
-              </div>
+              <div><span>Твоята снимка</span><img src={sourceImage || ""} alt="Оригинална снимка" /></div>
+              <div><span>{modelKind.toUpperCase()} визуализация</span><img src={previewImage} alt="AI визуализация на фигурка" /></div>
             </div>
 
             <div className="control-panel">
               <div>
                 <p className="control-label">Харесва ли ти?</p>
-                <h3>Това е визията за твоята фигурка.</h3>
+                <h3>Това е визията за твоята {modelKind.toUpperCase()} фигурка.</h3>
                 <p>След плащането от тази одобрена визуализация ще генерираме истинския 3D модел за производство.</p>
               </div>
               <button className="primary-button" onClick={() => setStep("order")}>Да, продължаваме</button>
@@ -322,8 +359,7 @@ export default function ToyBuilder() {
         {step === "order" && (
           <div className="panel-grid order-grid">
             <div className="approved-card">
-              <div className="approved-badge">Одобрена визия</div>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <div className="approved-badge">{modelKind.toUpperCase()} · Одобрена визия</div>
               <img src={previewImage || sourceImage || ""} alt="Одобрена визуализация" />
               <small>Prototype: {prototypeTaskId}</small>
             </div>
@@ -332,12 +368,8 @@ export default function ToyBuilder() {
               <div>
                 <p className="control-label">Размер</p>
                 <div className="size-options">
-                  {[
-                    ["10", "10 cm", "€49"],
-                    ["15", "15 cm", "€69"],
-                    ["20", "20 cm", "€89"],
-                  ].map(([value, label, amount]) => (
-                    <button key={value} className={size === value ? "size active" : "size"} onClick={() => setSize(value)}>
+                  {[["10", "10 cm", "€49"], ["15", "15 cm", "€69"], ["20", "20 cm", "€89"]].map(([value, label, amount]) => (
+                    <button type="button" key={value} className={size === value ? "size active" : "size"} onClick={() => setSize(value)}>
                       <strong>{label}</strong><span>{amount}</span>
                     </button>
                   ))}
@@ -349,7 +381,7 @@ export default function ToyBuilder() {
               <button className="primary-button" disabled={checkoutLoading} onClick={goToCheckout}>
                 {checkoutLoading ? "Отваряме плащането…" : "Продължи към плащане"}
               </button>
-              <p className="security-note">След плащането Shopify потвърждава поръчката, а 3D build се стартира автоматично на сървъра.</p>
+              <p className="security-note">След плащането Shopify потвърждава поръчката, а правилният 3D build се стартира автоматично.</p>
               <button className="text-button" onClick={() => setStep("preview")}>Назад към визуализацията</button>
             </div>
           </div>
