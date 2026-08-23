@@ -16,19 +16,8 @@ export function projectAssetPath(projectId: string, filename: string) {
   return `${safePathPart(projectId)}/${safePathPart(filename)}`;
 }
 
-export async function archiveRemoteAsset(input: {
-  projectId: string;
-  sourceUrl: string;
-  filename: string;
-  contentType?: string;
-}) {
+async function uploadBytes(path: string, bytes: ArrayBuffer | Uint8Array, contentType: string) {
   const { url, key, bucket } = storageConfig();
-  const remote = await fetch(input.sourceUrl, { cache: "no-store" });
-  if (!remote.ok) throw new Error(`Could not download asset (${remote.status}).`);
-
-  const bytes = await remote.arrayBuffer();
-  const contentType = input.contentType || remote.headers.get("content-type") || "application/octet-stream";
-  const path = projectAssetPath(input.projectId, input.filename);
   const upload = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`, {
     method: "POST",
     headers: {
@@ -37,7 +26,7 @@ export async function archiveRemoteAsset(input: {
       "Content-Type": contentType,
       "x-upsert": "true",
     },
-    body: bytes,
+    body: bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes),
   });
 
   if (!upload.ok) {
@@ -46,6 +35,31 @@ export async function archiveRemoteAsset(input: {
   }
 
   return path;
+}
+
+export async function archiveBytes(input: {
+  projectId: string;
+  bytes: ArrayBuffer | Uint8Array;
+  filename: string;
+  contentType?: string;
+}) {
+  const path = projectAssetPath(input.projectId, input.filename);
+  return uploadBytes(path, input.bytes, input.contentType || "application/octet-stream");
+}
+
+export async function archiveRemoteAsset(input: {
+  projectId: string;
+  sourceUrl: string;
+  filename: string;
+  contentType?: string;
+}) {
+  const remote = await fetch(input.sourceUrl, { cache: "no-store" });
+  if (!remote.ok) throw new Error(`Could not download asset (${remote.status}).`);
+
+  const bytes = await remote.arrayBuffer();
+  const contentType = input.contentType || remote.headers.get("content-type") || "application/octet-stream";
+  const path = projectAssetPath(input.projectId, input.filename);
+  return uploadBytes(path, bytes, contentType);
 }
 
 export async function createSignedAssetUrl(path: string, expiresIn = 3600) {
