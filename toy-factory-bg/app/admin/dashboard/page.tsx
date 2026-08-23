@@ -27,7 +27,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
   const stats = {
     paid: allForStats.filter((p) => Boolean(p.paid_at)).length,
-    ai: allForStats.filter((p) => ["PAID_BUILD_STARTING", "3D_GENERATING", "PRINT_FILE_GENERATING"].includes(p.status)).length,
+    ai: allForStats.filter((p) => ["PAID_BUILD_STARTING", "3D_GENERATING", "MODEL_RESIZING", "PRINT_FILE_GENERATING"].includes(p.status)).length,
     ready: allForStats.filter((p) => p.status === "READY_FOR_PRINT").length,
     production: allForStats.filter((p) => ["PRINTING", "PRINTED", "PACKED"].includes(p.status)).length,
   };
@@ -40,7 +40,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </header>
 
       <section className="admin-page-heading">
-        <div><p className="admin-kicker">OPERATIONS</p><h1>Поръчки и производство</h1><p>Shopify плащане → Meshy 3D → 3MF → печат → изпращане.</p></div>
+        <div><p className="admin-kicker">OPERATIONS</p><h1>Поръчки и производство</h1><p>Shopify плащане → Meshy 3D → exact size → 3MF → печат → изпращане.</p></div>
         <div className="integration-strip">
           {checks.map((item) => <div className={`integration-pill ${item.ok ? "ok" : "missing"}`} key={item.name}><span></span><strong>{item.name}</strong><small>{item.ok ? "connected" : "missing"}</small></div>)}
         </div>
