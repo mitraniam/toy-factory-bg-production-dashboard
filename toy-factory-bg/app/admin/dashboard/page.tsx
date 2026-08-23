@@ -14,6 +14,7 @@ function date(value?: string | null) {
   if (!value) return "—";
   return new Intl.DateTimeFormat("bg-BG", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Sofia" }).format(new Date(value));
 }
+function modelLabel(value?: string | null) { return (value || "pop").toUpperCase(); }
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   if (!(await isAdminAuthenticated())) redirect("/admin");
@@ -35,7 +36,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   return (
     <main className="admin-shell">
       <header className="admin-topbar">
-        <div><Link href="/admin/dashboard" className="admin-brand">TF / OPS</Link><span>Production</span></div>
+        <div><Link href="/admin/dashboard" className="admin-brand">POPME / OPS</Link><span>Production</span></div>
         <div className="admin-topbar-actions"><SyncAllButton /><LogoutButton /></div>
       </header>
 
@@ -66,20 +67,21 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
 
         <div className="admin-table-wrap">
           <table className="admin-table">
-            <thead><tr><th>Project</th><th>Shopify</th><th>Client</th><th>Size</th><th>Status</th><th>Created</th><th></th></tr></thead>
+            <thead><tr><th>Project</th><th>Shopify</th><th>Client</th><th>Model</th><th>Size</th><th>Status</th><th>Created</th><th></th></tr></thead>
             <tbody>
               {projects.map((project) => (
                 <tr key={project.id}>
                   <td><strong>TF-{shortId(project.id)}</strong><small>{project.id}</small></td>
                   <td><strong>{project.shopify_order_name || "Not paid"}</strong><small>{project.paid_at ? `Paid ${date(project.paid_at)}` : "Awaiting checkout/payment"}</small></td>
                   <td><strong>{project.customer_name || "—"}</strong><small>{project.customer_email || project.shipping_city || "—"}</small></td>
+                  <td><span className={`model-chip ${project.model_kind || "pop"}`}>{modelLabel(project.model_kind)}</span></td>
                   <td><strong>{project.size_cm} cm</strong><small>€{Number(project.price_eur).toFixed(2)}</small></td>
                   <td><span className={`status-chip ${STATUS_META[project.status].tone}`}>{STATUS_META[project.status].label}</span>{project.last_error && <small className="table-error">Needs attention</small>}</td>
                   <td>{date(project.created_at)}</td>
                   <td><Link className="admin-open-link" href={`/admin/projects/${project.id}`}>Open →</Link></td>
                 </tr>
               ))}
-              {!projects.length && <tr><td colSpan={7} className="admin-empty">Няма проекти по този филтър.</td></tr>}
+              {!projects.length && <tr><td colSpan={8} className="admin-empty">Няма проекти по този филтър.</td></tr>}
             </tbody>
           </table>
         </div>
