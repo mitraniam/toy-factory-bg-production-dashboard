@@ -26,6 +26,22 @@ function getApiKey() {
   return key;
 }
 
+function getWebhookUrl() {
+  const base = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "")
+  ).replace(/\/$/, "");
+  const secret = process.env.MESHY_WEBHOOK_SECRET || process.env.CRON_SECRET;
+  if (!base || !secret) return null;
+  return `${base}/api/meshy/webhook?secret=${encodeURIComponent(secret)}`;
+}
+
+function withWebhook<T extends Record<string, unknown>>(body: T) {
+  const webhookUrl = getWebhookUrl();
+  return webhookUrl ? { ...body, webhook_url: webhookUrl } : body;
+}
+
 async function meshyFetch(url: string, init?: RequestInit) {
   const response = await fetch(url, {
     ...init,
@@ -47,7 +63,7 @@ async function meshyFetch(url: string, init?: RequestInit) {
 export async function createPrototype(kind: ModelKind, imageUrlOrDataUri: string): Promise<string> {
   const data = await meshyFetch(`${creativeLabBase(kind)}/prototype`, {
     method: "POST",
-    body: JSON.stringify({ image_url: imageUrlOrDataUri, remove_background: true }),
+    body: JSON.stringify(withWebhook({ image_url: imageUrlOrDataUri, remove_background: true })),
   });
   if (!data?.result) throw new Error("Meshy did not return a prototype task id.");
   return data.result;
@@ -56,7 +72,7 @@ export async function createPrototype(kind: ModelKind, imageUrlOrDataUri: string
 export async function createBuild(kind: ModelKind, prototypeTaskId: string): Promise<string> {
   const data = await meshyFetch(`${creativeLabBase(kind)}/build`, {
     method: "POST",
-    body: JSON.stringify({ input_task_id: prototypeTaskId }),
+    body: JSON.stringify(withWebhook({ input_task_id: prototypeTaskId })),
   });
   if (!data?.result) throw new Error("Meshy did not return a build task id.");
   return data.result;
@@ -71,11 +87,11 @@ export async function createResize(modelUrl: string, heightCm: number): Promise<
   if (!Number.isFinite(heightCm) || heightCm <= 0) throw new Error("Invalid production height.");
   const data = await meshyFetch(RESIZE_BASE_URL, {
     method: "POST",
-    body: JSON.stringify({
+    body: JSON.stringify(withWebhook({
       model_url: modelUrl,
       resize_height: heightCm / 100,
       origin_at: "bottom",
-    }),
+    })),
   });
   if (!data?.result) throw new Error("Meshy did not return a resize task id.");
   return data.result;
@@ -90,7 +106,7 @@ export async function createMultiColorPrint(modelUrl: string): Promise<string> {
   const maxColors = Number.isFinite(parsed) ? Math.min(Math.max(Math.round(parsed), 1), 16) : 8;
   const data = await meshyFetch(PRINT_BASE_URL, {
     method: "POST",
-    body: JSON.stringify({ model_url: modelUrl, max_colors: maxColors, style: "cartoon" }),
+    body: JSON.stringify(withWebhook({ model_url: modelUrl, max_colors: maxColors, style: "cartoon" })),
   });
   if (!data?.result) throw new Error("Meshy did not return a multi-color print task id.");
   return data.result;
