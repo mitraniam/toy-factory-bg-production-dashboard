@@ -1,10 +1,7 @@
 import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { createBuild } from "@/lib/meshy";
-import {
-  claimProjectForPaidOrder,
-  updateProject,
-} from "@/lib/projects";
+import { syncProject } from "@/lib/production";
+import { claimProjectForPaidOrder } from "@/lib/projects";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,9 +39,7 @@ function projectIdsFromOrder(order: ShopifyPaidOrder) {
   const ids = new Set<string>();
   for (const line of order.line_items || []) {
     for (const property of line.properties || []) {
-      if (property.name === "Project ID" && property.value) {
-        ids.add(property.value);
-      }
+      if (property.name === "Project ID" && property.value) ids.add(property.value);
     }
   }
   return [...ids];
@@ -56,13 +51,8 @@ export async function POST(request: NextRequest) {
   const topic = request.headers.get("x-shopify-topic");
   const webhookId = request.headers.get("x-shopify-webhook-id");
 
-  if (!verifyWebhook(rawBody, hmac)) {
-    return new NextResponse("Invalid webhook signature", { status: 401 });
-  }
-
-  if (topic && topic !== "orders/paid") {
-    return new NextResponse("Ignored topic", { status: 200 });
-  }
+  if (!verifyWebhook(rawBody, hmac)) return new NextResponse("Invalid webhook signature", { status: 401 });
+  if (topic && topic !== "orders/paid") return new NextResponse("Ignored topic", { status: 200 });
 
   let order: ShopifyPaidOrder;
   try {
@@ -72,17 +62,10 @@ export async function POST(request: NextRequest) {
   }
 
   const projectIds = projectIdsFromOrder(order);
-  if (!projectIds.length) {
-    return new NextResponse("No toy projects", { status: 200 });
-  }
+  if (!projectIds.length) return new NextResponse("No toy projects", { status: 200 });
 
-  const orderId =
-    order.admin_graphql_api_id ||
-    (order.id ? `gid://shopify/Order/${String(order.id)}` : null);
-
-  if (!orderId) {
-    return new NextResponse("Missing order id", { status: 400 });
-  }
+  const orderId = order.admin_graphql_api_id || (order.id ? `gid://shopify/Order/${String(order.id)}` : null);
+  if (!orderId) return new NextResponse("Missing order id", { status: 400 });
 
   const failures: string[] = [];
 
@@ -104,24 +87,13 @@ export async function POST(request: NextRequest) {
       if (!claimed) continue;
 
       try {
-        const buildTaskId = await createBuild(claimed.model_kind || "pop", claimed.prototype_task_id);
-        await updateProject(projectId, {
-          status: "3D_GENERATING",
-          build_task_id: buildTaskId,
-          last_error: null,
-        });
-      } catch (buildError) {
-        const message = buildError instanceof Error ? buildError.message : "Meshy build failed";
-        await updateProject(projectId, {
-          status: "BUILD_FAILED",
-          last_error: message,
-        });
+        await syncProject(claimed);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Production sync failed";
         failures.push(`${projectId}: ${message}`);
       }
     } catch (error) {
-      failures.push(
-        `${projectId}: ${error instanceof Error ? error.message : "Unknown processing error"}`
-      );
+      failures.push(`${projectId}: ${error instanceof Error ? error.message : "Unknown processing error"}`);
     }
   }
 
