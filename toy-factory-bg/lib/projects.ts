@@ -4,6 +4,7 @@ export type ProjectStatus =
   | "PAID_BUILD_STARTING"
   | "3D_GENERATING"
   | "BUILD_FAILED"
+  | "MODEL_RESIZING"
   | "PRINT_FILE_GENERATING"
   | "PRINT_FILE_FAILED"
   | "READY_FOR_PRINT"
@@ -19,6 +20,7 @@ export const PROJECT_STATUSES: ProjectStatus[] = [
   "PAID_BUILD_STARTING",
   "3D_GENERATING",
   "BUILD_FAILED",
+  "MODEL_RESIZING",
   "PRINT_FILE_GENERATING",
   "PRINT_FILE_FAILED",
   "READY_FOR_PRINT",
@@ -47,6 +49,7 @@ export type ToyProject = {
   customer_email?: string | null;
   shipping_city?: string | null;
   build_task_id?: string | null;
+  resize_task_id?: string | null;
   print_task_id?: string | null;
   glb_url?: string | null;
   three_mf_url?: string | null;
