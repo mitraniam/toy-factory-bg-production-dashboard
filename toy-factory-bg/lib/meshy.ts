@@ -1,11 +1,12 @@
 const VINYL_BASE_URL = "https://api.meshy.ai/openapi/creative-lab/vinyl-figure/v1";
+const RESIZE_BASE_URL = "https://api.meshy.ai/openapi/v1/resize";
 const PRINT_BASE_URL = "https://api.meshy.ai/openapi/v1/print/multi-color";
 
 export type MeshyStage = "prototype" | "build";
 
 export type MeshyTask = {
   id: string;
-  status: "PENDING" | "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "EXPIRED" | string;
+  status: "PENDING" | "IN_PROGRESS" | "SUCCEEDED" | "FAILED" | "EXPIRED" | "CANCELED" | string;
   progress?: number;
   task_error?: { message?: string } | null;
   image_urls?: string[];
@@ -58,6 +59,24 @@ export async function createBuild(prototypeTaskId: string): Promise<string> {
 export async function getTask(stage: MeshyStage, id: string): Promise<MeshyTask> {
   if (stage !== "prototype" && stage !== "build") throw new Error("Invalid Meshy stage.");
   return meshyFetch(`${VINYL_BASE_URL}/${stage}/${encodeURIComponent(id)}`);
+}
+
+export async function createResize(modelUrl: string, heightCm: number): Promise<string> {
+  if (!Number.isFinite(heightCm) || heightCm <= 0) throw new Error("Invalid production height.");
+  const data = await meshyFetch(RESIZE_BASE_URL, {
+    method: "POST",
+    body: JSON.stringify({
+      model_url: modelUrl,
+      resize_height: heightCm / 100,
+      origin_at: "bottom",
+    }),
+  });
+  if (!data?.result) throw new Error("Meshy did not return a resize task id.");
+  return data.result;
+}
+
+export async function getResize(id: string): Promise<MeshyTask> {
+  return meshyFetch(`${RESIZE_BASE_URL}/${encodeURIComponent(id)}`);
 }
 
 export async function createMultiColorPrint(modelUrl: string): Promise<string> {
