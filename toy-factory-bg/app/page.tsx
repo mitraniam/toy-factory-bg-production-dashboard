@@ -1,9 +1,9 @@
 import ToyBuilder from "@/components/toy-builder";
 
 const styles = [
-  { name: "POP", copy: "Графична vinyl визия с голяма глава и силен collectible характер.", tone: "coral" },
-  { name: "MINI", copy: "По-мека chibi интерпретация с човешки силует и много характер.", tone: "blue" },
-  { name: "BRICK", copy: "Твоята снимка, превърната в playful brick-style колекционерска фигурка.", tone: "lime" },
+  { name: "POP", key: "pop", copy: "Графична vinyl визия с голяма глава и силен collectible характер.", tone: "coral" },
+  { name: "MINI", key: "mini", copy: "По-мека chibi интерпретация с човешки силует и много характер.", tone: "blue" },
+  { name: "BRICK", key: "brick", copy: "Твоята снимка, превърната в playful brick-style колекционерска фигурка.", tone: "lime" },
 ];
 
 export default function Home() {
@@ -16,19 +16,20 @@ export default function Home() {
         <div className="popme-nav-links">
           <a href="#styles">Стилове</a>
           <a href="#how">Как работи</a>
-          <a className="popme-nav-cta" href="#create">CREATE MY POP</a>
+          <a className="popme-nav-cta" href="#create">CREATE MINE</a>
         </div>
       </nav>
 
       <section className="popme-hero">
         <div className="popme-hero-copy">
           <p className="popme-tag">MADE OF YOU.</p>
-          <h1>MEET<br />YOUR MINI.</h1>
-          <p className="popme-hero-text">Качи снимка, избери своя стил и виж как изглеждаш като персонализирана 3D колекционерска фигурка — преди да поръчаш.</p>
+          <h1>MEET<br />YOUR 3D SELF.</h1>
+          <p className="popme-hero-text">Качи снимка, избери POP, MINI или BRICK и виж персонализираната си 3D колекционерска фигурка още преди да поръчаш.</p>
           <div className="popme-hero-actions">
-            <a className="popme-primary" href="#create">CREATE MY POP <span>↗</span></a>
+            <a className="popme-primary" href="#create">CREATE MINE <span>↗</span></a>
             <a className="popme-secondary" href="#styles">Виж стиловете</a>
           </div>
+          <div className="popme-price-strip"><strong>FROM €49</strong><span>Preview before payment · 10 / 15 / 20 cm</span></div>
           <div className="popme-proof">
             <span>01 · PREVIEW FIRST</span>
             <span>02 · MADE TO ORDER</span>
@@ -57,7 +58,7 @@ export default function Home() {
       </section>
 
       <section className="popme-marquee" aria-label="brand statement">
-        <div>YOUR FACE. YOUR STYLE. YOUR POP. ✦ YOUR FACE. YOUR STYLE. YOUR POP. ✦</div>
+        <div>YOUR FACE. YOUR STYLE. YOUR FIGURE. ✦ YOUR FACE. YOUR STYLE. YOUR FIGURE. ✦</div>
       </section>
 
       <section className="popme-styles" id="styles">
@@ -71,7 +72,7 @@ export default function Home() {
               <div className="popme-style-top"><span>0{index + 1}</span><strong>{style.name}</strong></div>
               <div className={`style-figure style-figure-${style.name.toLowerCase()}`} aria-hidden="true"><i /><b /><em /></div>
               <p>{style.copy}</p>
-              <a href="#create">Избери {style.name} →</a>
+              <a href={`/?style=${style.key}#create`}>Избери {style.name} →</a>
             </article>
           ))}
         </div>
@@ -84,7 +85,7 @@ export default function Home() {
         </div>
         <div className="popme-how-grid">
           <article><span>01</span><h3>Качи снимка</h3><p>Избери ясна снимка, на която лицето и визията ти се виждат добре.</p></article>
-          <article><span>02</span><h3>Виж своя POP</h3><p>Генерираме preview в избрания стил. Можеш да одобриш или да опиташ отново.</p></article>
+          <article><span>02</span><h3>Виж своята визия</h3><p>Генерираме preview в избрания стил. Можеш да одобриш или да опиташ отново.</p></article>
           <article><span>03</span><h3>Ние го правим реален</h3><p>След плащането създаваме 3D модела, подготвяме го за печат и произвеждаме твоята фигурка.</p></article>
         </div>
       </section>
@@ -94,13 +95,19 @@ export default function Home() {
       <section className="popme-facts">
         <div><strong>10 / 15 / 20</strong><span>CM · THREE SIZES</span></div>
         <div><strong>ONE OF ONE</strong><span>MADE TO ORDER</span></div>
-        <div><strong>YOU → MINI</strong><span>MADE OF YOU.</span></div>
+        <div><strong>YOU → 3D</strong><span>MADE OF YOU.</span></div>
+      </section>
+
+      <section className="popme-final-cta">
+        <p>READY WHEN YOU ARE.</p>
+        <h2>Твоята снимка.<br />Твоята фигурка.</h2>
+        <a href="#create">CREATE MINE ↗</a>
       </section>
 
       <footer className="popme-footer">
         <div className="popme-footer-logo">popme<span>✦</span></div>
         <p>Personalized 3D collectibles.<br />Made of you.</p>
-        <div className="popme-footer-links"><a href="#create">Create yours</a><a href="#how">How it works</a></div>
+        <div className="popme-footer-links"><a href="#create">Create yours</a><a href="#how">How it works</a><a href="#styles">Styles</a></div>
         <small>© 2026 POPME</small>
       </footer>
     </main>
