@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTask, type ModelKind } from "@/lib/meshy";
 import { createProject, updateProject } from "@/lib/projects";
 import { createToyCheckout, ToySize } from "@/lib/shopify";
+import { archiveRemoteAsset } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       model_kind: modelKind,
       prototype_task_id: prototypeTaskId,
       preview_url: previewUrl,
+      preview_storage_path: null,
       size_cm: Number(size),
       price_eur: PRICES[size],
       status: "CHECKOUT_CREATED",
@@ -88,9 +90,26 @@ export async function POST(request: NextRequest) {
       resize_task_id: null,
       print_task_id: null,
       glb_url: null,
+      glb_storage_path: null,
       three_mf_url: null,
+      three_mf_storage_path: null,
       last_error: null,
     });
+
+    // Keep a permanent copy of the approved preview. This is best-effort so a
+    // temporary storage hiccup never blocks a customer from reaching checkout.
+    if (!previewUrl.startsWith("data:")) {
+      try {
+        const previewStoragePath = await archiveRemoteAsset({
+          projectId: newProjectId,
+          sourceUrl: previewUrl,
+          filename: "preview",
+        });
+        await updateProject(newProjectId, { preview_storage_path: previewStoragePath });
+      } catch (archiveError) {
+        console.error("preview archive failed", { projectId: newProjectId, archiveError });
+      }
+    }
 
     try {
       const cart = await createToyCheckout({
