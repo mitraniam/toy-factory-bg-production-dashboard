@@ -1,19 +1,27 @@
-import { NextResponse } from "next/server";
-import { getTask, type MeshyStage } from "@/lib/meshy";
+import { NextRequest, NextResponse } from "next/server";
+import { getTask, type MeshyStage, type ModelKind } from "@/lib/meshy";
 
 export const runtime = "nodejs";
 
 type Params = Promise<{ stage: string; id: string }>;
 
-export async function GET(_request: Request, context: { params: Params }) {
+function isModelKind(value: unknown): value is ModelKind {
+  return value === "pop" || value === "mini" || value === "brick";
+}
+
+export async function GET(request: NextRequest, context: { params: Params }) {
   try {
     const { stage, id } = await context.params;
+    const modelKind = request.nextUrl.searchParams.get("modelKind") || "pop";
 
     if (stage !== "prototype" && stage !== "build") {
       return NextResponse.json({ error: "Невалиден етап." }, { status: 400 });
     }
+    if (!isModelKind(modelKind)) {
+      return NextResponse.json({ error: "Невалиден стил на фигурката." }, { status: 400 });
+    }
 
-    const task = await getTask(stage as MeshyStage, id);
+    const task = await getTask(modelKind, stage as MeshyStage, id);
     return NextResponse.json(task);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
