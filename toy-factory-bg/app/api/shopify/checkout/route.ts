@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getTask } from "@/lib/meshy";
+import { getTask, type ModelKind } from "@/lib/meshy";
 import { createProject, updateProject } from "@/lib/projects";
 import { createToyCheckout, ToySize } from "@/lib/shopify";
 
@@ -14,6 +14,10 @@ const PRICES: Record<ToySize, number> = {
 
 function isToySize(value: unknown): value is ToySize {
   return value === "10" || value === "15" || value === "20";
+}
+
+function isModelKind(value: unknown): value is ModelKind {
+  return value === "pop" || value === "mini" || value === "brick";
 }
 
 function getBuyerIp(request: NextRequest) {
@@ -31,12 +35,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const prototypeTaskId = String(body?.prototypeTaskId || "");
     const size = body?.size;
+    const modelKind = body?.modelKind;
 
     if (!prototypeTaskId) {
       return NextResponse.json({ error: "Липсва prototype task." }, { status: 400 });
     }
     if (!isToySize(size)) {
       return NextResponse.json({ error: "Невалиден размер." }, { status: 400 });
+    }
+    if (!isModelKind(modelKind)) {
+      return NextResponse.json({ error: "Невалиден стил на фигурката." }, { status: 400 });
     }
 
     let previewUrl: string;
@@ -47,8 +55,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Липсва mock preview." }, { status: 400 });
       }
     } else {
-      // Never trust a prototype id from the browser without checking Meshy server-side.
-      const task = await getTask("prototype", prototypeTaskId);
+      const task = await getTask(modelKind, "prototype", prototypeTaskId);
       if (task.status !== "SUCCEEDED") {
         return NextResponse.json(
           { error: "Визуализацията още не е готова за поръчка." },
@@ -66,6 +73,7 @@ export async function POST(request: NextRequest) {
 
     await createProject({
       id: newProjectId,
+      model_kind: modelKind,
       prototype_task_id: prototypeTaskId,
       preview_url: previewUrl,
       size_cm: Number(size),
@@ -77,6 +85,8 @@ export async function POST(request: NextRequest) {
       shopify_webhook_id: null,
       paid_at: null,
       build_task_id: null,
+      resize_task_id: null,
+      print_task_id: null,
       glb_url: null,
       three_mf_url: null,
       last_error: null,
