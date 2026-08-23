@@ -1,7 +1,7 @@
-const VINYL_BASE_URL = "https://api.meshy.ai/openapi/creative-lab/vinyl-figure/v1";
 const RESIZE_BASE_URL = "https://api.meshy.ai/openapi/v1/resize";
 const PRINT_BASE_URL = "https://api.meshy.ai/openapi/v1/print/multi-color";
 
+export type ModelKind = "pop" | "mini" | "brick";
 export type MeshyStage = "prototype" | "build";
 
 export type MeshyTask = {
@@ -13,6 +13,12 @@ export type MeshyTask = {
   thumbnail_url?: string;
   model_urls?: { glb?: string; obj?: string; mtl?: string; "3mf"?: string };
 };
+
+function creativeLabBase(kind: ModelKind) {
+  if (kind === "mini") return "https://api.meshy.ai/openapi/creative-lab/figure/v1";
+  if (kind === "brick") return "https://api.meshy.ai/openapi/creative-lab/brick-figure/v1";
+  return "https://api.meshy.ai/openapi/creative-lab/vinyl-figure/v1";
+}
 
 function getApiKey() {
   const key = process.env.MESHY_API_KEY;
@@ -38,8 +44,8 @@ async function meshyFetch(url: string, init?: RequestInit) {
   return body;
 }
 
-export async function createPrototype(imageUrlOrDataUri: string): Promise<string> {
-  const data = await meshyFetch(`${VINYL_BASE_URL}/prototype`, {
+export async function createPrototype(kind: ModelKind, imageUrlOrDataUri: string): Promise<string> {
+  const data = await meshyFetch(`${creativeLabBase(kind)}/prototype`, {
     method: "POST",
     body: JSON.stringify({ image_url: imageUrlOrDataUri }),
   });
@@ -47,8 +53,8 @@ export async function createPrototype(imageUrlOrDataUri: string): Promise<string
   return data.result;
 }
 
-export async function createBuild(prototypeTaskId: string): Promise<string> {
-  const data = await meshyFetch(`${VINYL_BASE_URL}/build`, {
+export async function createBuild(kind: ModelKind, prototypeTaskId: string): Promise<string> {
+  const data = await meshyFetch(`${creativeLabBase(kind)}/build`, {
     method: "POST",
     body: JSON.stringify({ input_task_id: prototypeTaskId }),
   });
@@ -56,9 +62,9 @@ export async function createBuild(prototypeTaskId: string): Promise<string> {
   return data.result;
 }
 
-export async function getTask(stage: MeshyStage, id: string): Promise<MeshyTask> {
+export async function getTask(kind: ModelKind, stage: MeshyStage, id: string): Promise<MeshyTask> {
   if (stage !== "prototype" && stage !== "build") throw new Error("Invalid Meshy stage.");
-  return meshyFetch(`${VINYL_BASE_URL}/${stage}/${encodeURIComponent(id)}`);
+  return meshyFetch(`${creativeLabBase(kind)}/${stage}/${encodeURIComponent(id)}`);
 }
 
 export async function createResize(modelUrl: string, heightCm: number): Promise<string> {
