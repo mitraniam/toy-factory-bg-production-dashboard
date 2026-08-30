@@ -24,36 +24,30 @@ button,input,select,textarea{font-family:inherit}
 .popme-proof-callout h2,
 .admin-login-card h1{font-family:var(--popme-display);font-weight:900}
 
-/* Display typography: real variable font, no synthetic 950 weight. */
 .popme-hero h1{font-size:clamp(76px,8vw,128px);line-height:.84;letter-spacing:-.055em;font-weight:900}
 .popme-section-head h2{line-height:.86;letter-spacing:-.045em;font-weight:900}
 .builder-header h2{line-height:.88;letter-spacing:-.04em;font-weight:900}
 .popme-logo{font-weight:900;letter-spacing:-.045em}
 .popme-tag,.popme-section-head>p,.eyebrow,.control-label{font-family:var(--popme-body);font-weight:800}
 
-/* Remove the isolated emoji treatment and all legacy pseudo-prices. */
 .popme-price-strip strong::before,.style-price strong::before,.builder-price-note strong::before{content:none!important}
 .launch-pill{box-shadow:none!important;border:1.5px solid var(--popme-black)!important;background:var(--popme-black);color:var(--popme-lime);font-weight:800}
 
-/* Shadow hierarchy: only primary CTA + three hero/style cards get the strong offset. */
 .popme-primary,.primary-button{box-shadow:4px 4px 0 var(--popme-black)!important}
 .popme-style-card{box-shadow:6px 6px 0 var(--popme-black)!important}
 .hero-product{box-shadow:6px 6px 0 var(--popme-black)!important}
 .offer-copy,.preview-first-visual,.preview-ticket,.popme-facts>div,.builder-card,.hero-note{box-shadow:none!important}
 .card-price-list,.size,.dropzone,.preview-disclaimer,.steps{box-shadow:none!important}
 
-/* Softer secondary surfaces. */
 .popme-style-card,.hero-product{border-width:2px}
 .card-price-list{border:1px solid rgba(17,17,17,.32);border-radius:14px}
 .size{border:1px solid #d5cec4;border-radius:12px}
 .builder-card{border:2px solid var(--popme-black);border-radius:18px}
 .dropzone{border-radius:16px}
 
-/* Bright lime stays the brand fill; darker lime is reserved for lime text on light backgrounds. */
 .lime-text,.success-text{color:var(--popme-lime-ink)!important}
 .popme-section-head:not(.inverted)>p,.price-clarifier{color:#675f57}
 
-/* Compact homepage. */
 .popme-nav{min-height:66px;padding-left:30px;padding-right:30px}
 .popme-nav-links{gap:22px}
 .popme-hero{min-height:610px;padding-top:34px;padding-bottom:54px}
@@ -75,6 +69,7 @@ button,input,select,textarea{font-family:inherit}
 .popme-style-card>p{min-height:40px;margin-bottom:12px}
 .offer-copy{border:1.5px solid var(--popme-black);border-radius:16px;padding:15px 17px}
 .offer-copy strong{font-family:var(--popme-display);font-weight:900}
+.mobile-style-price,.mobile-swipe-hint{display:none}
 
 .compact-how{padding-top:78px;padding-bottom:82px}
 .compact-how .popme-how-grid{margin-top:42px}
@@ -82,7 +77,6 @@ button,input,select,textarea{font-family:inherit}
 .compact-how .popme-how-grid h3{margin-top:28px;font-family:var(--popme-display);font-size:30px;font-weight:800}
 .how-cta{display:inline-flex;margin-top:38px;background:var(--popme-lime);color:var(--popme-black);border:2px solid var(--popme-black);border-radius:999px;padding:14px 19px;font-size:11px;font-weight:900;box-shadow:4px 4px 0 var(--popme-black)}
 
-/* Conversion proof, intentionally ready for future UGC replacement. */
 .popme-proof-callout{max-width:1420px;margin:0 auto;padding:82px 34px;display:grid;grid-template-columns:.85fr 1.15fr;gap:58px;align-items:center}
 .proof-copy>p{font-size:10px;letter-spacing:.18em;font-weight:900;color:var(--popme-blue)}
 .proof-copy h2{font-size:clamp(58px,6vw,92px);line-height:.86;letter-spacing:-.045em;margin:0 0 22px}
@@ -100,7 +94,6 @@ button,input,select,textarea{font-family:inherit}
 .compact-final-cta{padding-top:58px;padding-bottom:58px}
 .popme-final-cta h2{letter-spacing:-.04em}
 
-/* Dedicated create flow. */
 .create-page{min-height:100vh;background:var(--popme-blue)}
 .create-nav{max-width:1240px;color:white}
 .create-nav .popme-logo span{color:var(--popme-lime)}
@@ -121,7 +114,6 @@ button,input,select,textarea{font-family:inherit}
 .dedicated-preview-grid .comparison img{height:410px}
 .builder-loading{display:grid;place-items:center}
 
-/* Admin should remain an operational SaaS interface, with only restrained POPME cues. */
 .admin-login-shell,.admin-shell{font-family:var(--popme-body);background:#f4f5f7}
 .admin-login-mark,.admin-kicker{color:var(--popme-blue)}
 .admin-button.primary{background:var(--popme-black)}
@@ -136,10 +128,23 @@ button,input,select,textarea{font-family:inherit}
 }
 
 @media(max-width:560px){
-  .popme-nav{min-height:60px;padding:0 17px}.popme-nav-links>a:not(.popme-nav-cta){display:none}.popme-nav-cta{padding:11px 13px}
-  .popme-hero{padding-top:25px;padding-bottom:40px}.popme-hero h1{font-size:68px;line-height:.84}.popme-hero-text{font-size:15px}.hero-products{height:365px}
-  .popme-styles{padding-top:58px;padding-bottom:64px}.split-head{align-items:flex-start}.offer-copy{width:170px!important;flex-basis:170px}.offer-copy strong{font-size:37px}
-  .popme-proof-callout{padding:62px 17px}.proof-copy h2{font-size:56px}.proof-visual{grid-template-columns:1fr;gap:11px}.proof-arrow{transform:rotate(90deg);text-align:center}.before-card,.after-card{min-height:270px}.after-card img{height:220px}
+  .popme-nav{min-height:56px;padding:0 14px}.popme-logo{font-size:27px}.popme-nav-links>a:not(.popme-nav-cta){display:none}.popme-nav-cta{padding:9px 12px;font-size:9px}
+
+  .popme-hero{min-height:auto;padding:18px 15px 24px;display:block}.launch-pill{font-size:8px;padding:7px 10px;margin-bottom:13px}.popme-tag{font-size:8px;letter-spacing:.14em;margin-bottom:12px}.popme-hero h1{font-size:61px;line-height:.82;max-width:330px}.popme-hero-text{font-size:14px;line-height:1.42;margin:14px 0}.popme-hero-actions{gap:9px}.popme-primary{padding:13px 16px;font-size:11px}.popme-secondary{font-size:11px}.popme-price-strip{margin-top:12px}.popme-price-strip strong{font-size:20px}.popme-price-strip span{font-size:9px}.hero-products{height:270px;margin-top:18px}.hero-note{display:none}
+
+  .popme-quick-flow{grid-template-columns:repeat(3,1fr);padding:0 10px}.popme-quick-flow>div{padding:10px 7px;display:grid;gap:3px;justify-items:center;text-align:center}.popme-quick-flow>div+div{border-top:0;border-left:1px solid var(--popme-line)}.popme-quick-flow b{font-size:7px;padding:3px 4px}.popme-quick-flow strong{font-size:8px;line-height:1.2}
+
+  .popme-styles{padding:44px 0 46px}.popme-styles>.popme-section-head,.price-clarifier,.mobile-swipe-hint{margin-left:15px;margin-right:15px}.split-head{display:block}.split-head h2{font-size:49px}.offer-copy{display:none}.popme-style-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;margin-top:24px;padding:0 15px 10px;scrollbar-width:none}.popme-style-grid::-webkit-scrollbar{display:none}.popme-style-card{flex:0 0 82vw;min-height:auto;height:430px;padding:14px;border-radius:18px;scroll-snap-align:start;box-shadow:4px 4px 0 var(--popme-black)!important}.popme-style-top strong{font-size:27px}.popme-style-top em{font-size:6px;padding:5px 7px}.style-product-image{height:225px;margin:9px 0 7px}.popme-style-card>p{font-size:11px;line-height:1.35;min-height:auto;margin:0 0 8px}.card-price-list{display:none}.mobile-style-price{display:block;font-size:12px;font-weight:900;margin-bottom:9px}.mobile-style-price span{font-size:9px;font-weight:700;opacity:.65}.style-cta{margin-top:auto;padding:11px 13px;font-size:9px}.mobile-swipe-hint{display:block;font-size:9px;font-weight:800;color:#6e655c;margin-top:5px}.price-clarifier{font-size:8px;line-height:1.4}
+
+  .compact-how{padding:48px 15px 52px}.compact-how .popme-section-head h2{font-size:49px}.compact-how .popme-how-grid{margin-top:24px;display:grid;gap:0}.compact-how .popme-how-grid article{min-height:auto;padding:14px 0 15px;display:grid;grid-template-columns:26px 1fr;column-gap:9px;border-top:1px solid #34363a}.compact-how .popme-how-grid article span{grid-row:1/3;font-size:8px}.compact-how .popme-how-grid h3{font-size:22px;margin:0 0 3px}.compact-how .popme-how-grid p{font-size:10px;line-height:1.4;margin:0}.how-cta{margin-top:22px;width:100%;justify-content:center;padding:12px 14px}
+
+  .popme-proof-callout{padding:48px 15px 50px;gap:26px}.proof-copy h2{font-size:50px;margin-bottom:13px}.proof-copy>span{font-size:12px;line-height:1.45}.proof-copy>a{margin-top:16px;padding:12px 14px;font-size:9px}.proof-visual{grid-template-columns:1fr 28px 1fr;gap:7px}.proof-arrow{transform:none;font-size:26px}.before-card,.after-card{min-height:170px;padding:8px;border-radius:13px}.photo-placeholder{font-size:25px}.after-card img{height:138px}.before-card>span,.after-card>span{font-size:7px}
+
+  .popme-faq{padding:46px 15px 48px}.popme-faq .popme-section-head h2{font-size:46px}.faq-list{margin-top:20px}.faq-list summary{padding-top:13px;padding-bottom:13px;font-size:11px}
+
+  .compact-final-cta{padding:38px 15px 42px}.compact-final-cta h2{font-size:49px}.final-offer{margin:14px 0}.popme-final-cta>a{width:100%;justify-content:center}
+  .popme-footer{padding:28px 15px 72px;gap:16px}.popme-footer-links{display:none}
+
   .create-page .builder-shell{padding:28px 12px 50px}.create-page .builder-header h2{font-size:48px}.create-page .dropzone{height:290px}.create-trust-strip{gap:12px;justify-content:space-between;font-size:7px;padding:12px}
   .dedicated-preview-grid .comparison img{height:280px}
 }
