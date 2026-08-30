@@ -1,14 +1,8 @@
-const priceTiers = [
-  { size: "10 cm", now: "€49", regular: "€59" },
-  { size: "15 cm", now: "€69", regular: "€89" },
-  { size: "20 cm", now: "€89", regular: "€119" },
-];
-
 const styles = [
   {
     name: "POP",
     key: "pop",
-    copy: "Класическа collectible визия с голяма глава и силен POP характер.",
+    copy: "Vinyl визия с по-голяма глава и силен колекционерски характер.",
     tone: "coral",
     image: "/marketing/pop-card.svg",
     badge: "КЛАСИКА",
@@ -16,7 +10,7 @@ const styles = [
   {
     name: "MINI",
     key: "mini",
-    copy: "По-мек chibi силует, повече детайл и изразителност.",
+    copy: "По-мек chibi силует, повече детайл и много характер.",
     tone: "blue",
     image: "/marketing/mini.svg",
     badge: "НАЙ-ПОПУЛЯРЕН",
@@ -40,117 +34,100 @@ const faqs = [
 
 export default function Home() {
   return (
-    <main className="popme-site popme-home">
-      <nav className="popme-nav" id="top">
-        <a className="popme-logo" href="#top" aria-label="POPME начало">popme<span>✦</span></a>
-        <div className="popme-nav-links">
+    <main className="popme-site popme-clean-home">
+      <nav className="clean-nav" id="top">
+        <a className="clean-logo" href="#top" aria-label="POPME начало">popme<span>✦</span></a>
+        <div className="clean-nav-links">
           <a href="#styles">Стилове</a>
           <a href="#how">Как работи</a>
           <a href="#faq">FAQ</a>
-          <a className="popme-nav-cta" href="/create">НАПРАВИ МЕ 3D →</a>
         </div>
+        <a className="clean-nav-cta" href="/create">СЪЗДАЙ ФИГУРКА →</a>
       </nav>
 
-      <section className="popme-hero">
-        <div className="popme-hero-copy">
-          <div className="launch-pill">СТАРТОВИ ЦЕНИ · ДО −25%</div>
-          <p className="popme-tag">СНИМКА → ВИЗУАЛИЗАЦИЯ → ФИГУРКА</p>
-          <h1>ТИ.<br />КАТО 3D<br />ФИГУРКА.</h1>
-          <p className="popme-hero-text">Избираш POP, MINI или BRICK. Качваш снимка. Виждаш резултата преди да платиш.</p>
-          <div className="popme-hero-actions">
-            <a className="popme-primary" href="/create">НАПРАВИ МЕ 3D <span>→</span></a>
-            <a className="popme-secondary" href="#styles">Виж стиловете</a>
-          </div>
-          <div className="popme-price-strip">
-            <strong>ОТ €49</strong>
-            <span>10 / 15 / 20 cm · preview преди плащане</span>
+      <section className="clean-hero">
+        <div className="clean-hero-copy">
+          <p className="clean-eyebrow">ТВОЯТА СНИМКА. ТВОЯТА ФИГУРКА.</p>
+          <h1>Една снимка.<br />Твоята фигурка.</h1>
+          <p className="clean-lead">Превръщаме снимката ти в персонализирана POP, MINI или BRICK 3D фигурка. Първо виждаш визуализацията. После решаваш.</p>
+          <div className="clean-hero-actions">
+            <a className="clean-primary" href="/create">СЪЗДАЙ СВОЯТА ФИГУРКА →</a>
+            <span>Стартова цена от <strong>€49</strong></span>
           </div>
         </div>
 
-        <div className="hero-products" aria-label="POPME стилове">
-          {styles.map((style) => (
-            <a className={`hero-product ${style.tone}`} href={`/create?style=${style.key}`} key={style.name}>
-              <img src={style.image} alt={`${style.name} примерна POPME фигурка`} />
-              <span>{style.name}</span>
-            </a>
-          ))}
-          <div className="hero-note">MADE OF YOU.</div>
+        <div className="clean-hero-visual" aria-label="POPME стилове">
+          <a className="clean-hero-card coral" href="/create?style=pop"><img src="/marketing/pop-card.svg" alt="POP стил" /><b>POP</b></a>
+          <a className="clean-hero-card blue featured" href="/create?style=mini"><img src="/marketing/mini.svg" alt="MINI стил" /><b>MINI</b></a>
+          <a className="clean-hero-card lime" href="/create?style=brick"><img src="/marketing/brick.svg" alt="BRICK стил" /><b>BRICK</b></a>
         </div>
       </section>
 
-      <section className="popme-styles" id="styles">
-        <div className="popme-section-head split-head">
-          <div><p>ИЗБЕРИ СВОЯ СТИЛ</p><h2>Три версии.<br />Все още ти.</h2></div>
-          <div className="offer-copy"><span>СТАРТОВИ ЦЕНИ</span><strong>ДО −25%</strong><small>за стартовия период</small></div>
+      <section className="clean-styles" id="styles">
+        <div className="clean-section-head">
+          <p>ИЗБЕРИ СВОЯ СТИЛ</p>
+          <h2>3 стила. 3 начина да си ти.</h2>
         </div>
-
-        <div className="popme-style-grid">
-          {styles.map((style, index) => (
-            <article className={`popme-style-card ${style.tone}`} key={style.name}>
-              <div className="popme-style-top"><span>0{index + 1}</span><strong>{style.name}</strong><em>{style.badge}</em></div>
-              <img className="style-product-image" src={style.image} alt={`${style.name} стил`} />
-              <p>{style.copy}</p>
-              <div className="mobile-style-price">от €49 <span>· 10 / 15 / 20 cm</span></div>
-              <div className="card-price-list" aria-label={`${style.name} цени`}>
-                {priceTiers.map((tier) => (
-                  <div key={tier.size}><span>{tier.size}</span><strong>{tier.now}</strong><del>{tier.regular}</del></div>
-                ))}
+        <div className="clean-style-grid">
+          {styles.map((style) => (
+            <article className={`clean-style-card ${style.tone}`} key={style.name}>
+              <div className="clean-style-copy">
+                <div className="clean-style-title"><h3>{style.name}</h3><span>{style.badge}</span></div>
+                <p>{style.copy}</p>
+                <div className="clean-style-price"><strong>от €49</strong><small>10 / 15 / 20 cm</small></div>
+                <a href={`/create?style=${style.key}`}>ИЗБЕРИ {style.name} →</a>
               </div>
-              <a className="style-cta" href={`/create?style=${style.key}`}>ИЗБЕРИ {style.name} →</a>
+              <img src={style.image} alt={`${style.name} POPME фигурка`} />
             </article>
           ))}
         </div>
-        <p className="mobile-swipe-hint">Плъзни за MINI и BRICK →</p>
-        <p className="price-clarifier">Зачеркнатите стойности са планираните редовни цени след стартовия период.</p>
       </section>
 
-      <section className="popme-how compact-how" id="how">
-        <div className="popme-section-head inverted"><p>3 СТЪПКИ</p><h2>От снимка<br />до твоя POPME.</h2></div>
-        <div className="popme-how-grid">
-          <article><span>01</span><h3>Качи снимка</h3><p>Една ясна снимка е достатъчна, за да започнем.</p></article>
-          <article><span>02</span><h3>Виж визуализация</h3><p>Генерираме избрания стил и ти решаваш дали е твоят.</p></article>
-          <article><span>03</span><h3>Поръчай</h3><p>Избираш 10, 15 или 20 cm и продължаваш към сигурен Shopify checkout.</p></article>
+      <section className="clean-how" id="how">
+        <div className="clean-section-head">
+          <p>КАК РАБОТИ</p>
+          <h2>Три стъпки. Толкова е.</h2>
         </div>
-        <a className="how-cta" href="/create">ЗАПОЧНИ СЪС СНИМКА →</a>
+        <div className="clean-how-grid">
+          <article><span>01</span><h3>Качи снимка</h3><p>Избираш стил и качваш ясна снимка.</p></article>
+          <article><span>02</span><h3>Виж визуализация</h3><p>Генерираме твоята фигурка преди плащане.</p></article>
+          <article><span>03</span><h3>Одобри и поръчай</h3><p>Избираш размер и продължаваш към checkout.</p></article>
+        </div>
       </section>
 
-      <section className="popme-proof-callout">
-        <div className="proof-copy">
+      <section className="clean-proof">
+        <div className="clean-proof-copy">
           <p>ПЪРВО ВИЖДАШ</p>
-          <h2>Не плащаш<br />на сляпо.</h2>
-          <span>Визуализацията е част от процеса. Харесваш я, избираш размер и чак тогава поръчваш.</span>
-          <a href="/create">ВИЖ МЕ КАТО ФИГУРКА →</a>
+          <h2>Не плащаш на сляпо.</h2>
+          <span>Харесваш визуализацията, избираш 10, 15 или 20 cm и чак тогава поръчваш.</span>
+          <a href="/create">НАПРАВИ МЕ 3D →</a>
         </div>
-        <div className="proof-visual">
-          <div className="before-card"><span>СНИМКА</span><div className="photo-placeholder">ТВОЯТА<br />СНИМКА</div></div>
-          <div className="proof-arrow">→</div>
-          <div className="after-card"><span>POPME</span><img src="/marketing/mini.svg" alt="POPME визуализация" /></div>
+        <div className="clean-proof-visual">
+          <div className="clean-photo-placeholder"><span>ТВОЯТА<br />СНИМКА</span></div>
+          <div className="clean-proof-arrow">→</div>
+          <div className="clean-result-card"><img src="/marketing/mini.svg" alt="Примерна POPME визуализация" /><span>ТВОЯТ POPME</span></div>
         </div>
       </section>
 
-      <section className="popme-faq" id="faq">
-        <div className="popme-section-head"><p>ПРЕДИ ДА ЗАПОЧНЕШ</p><h2>Най-важното.<br />Без дребния шрифт.</h2></div>
-        <div className="faq-list">
+      <section className="clean-faq" id="faq">
+        <div className="clean-section-head"><p>НАЙ-ВАЖНОТО</p><h2>Често задавани въпроси.</h2></div>
+        <div className="clean-faq-list">
           {faqs.map(([question, answer]) => (
             <details key={question}><summary>{question}<span>+</span></summary><p>{answer}</p></details>
           ))}
         </div>
       </section>
 
-      <section className="popme-final-cta compact-final-cta">
+      <section className="clean-final">
         <div><p>ГОТОВ ЛИ СИ?</p><h2>Една снимка.<br />Твоята фигурка.</h2></div>
-        <div className="final-offer"><span>СТАРТОВА ЦЕНА</span><strong>от €49</strong><small>preview преди плащане</small></div>
-        <a href="/create">НАПРАВИ МЕ 3D →</a>
+        <div className="clean-final-action"><strong>от €49</strong><a href="/create">СЪЗДАЙ СВОЯТА СЕГА →</a></div>
       </section>
 
-      <footer className="popme-footer">
-        <div className="popme-footer-logo">popme<span>✦</span></div>
-        <p>Персонализирани 3D колекционерски фигурки.<br />Made of you.</p>
-        <div className="popme-footer-links"><a href="#styles">Стилове</a><a href="#how">Как работи</a><a href="#faq">FAQ</a></div>
+      <footer className="clean-footer">
+        <div className="clean-logo">popme<span>✦</span></div>
+        <p>Персонализирани 3D колекционерски фигурки · Made of you.</p>
         <small>© 2026 POPME</small>
       </footer>
-
-      <a className="mobile-sticky-cta" href="/create">НАПРАВИ МЕ 3D →</a>
     </main>
   );
 }
