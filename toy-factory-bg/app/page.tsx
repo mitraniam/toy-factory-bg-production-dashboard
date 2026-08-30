@@ -96,6 +96,7 @@ export default function Home() {
               <div className="popme-style-top"><span>0{index + 1}</span><strong>{style.name}</strong><em>{style.badge}</em></div>
               <img className="style-product-image" src={style.image} alt={`${style.name} стил`} />
               <p>{style.copy}</p>
+              <div className="mobile-style-price">от €49 <span>· 10 / 15 / 20 cm</span></div>
               <div className="card-price-list" aria-label={`${style.name} цени`}>
                 {priceTiers.map((tier) => (
                   <div key={tier.size}><span>{tier.size}</span><strong>{tier.now}</strong><del>{tier.regular}</del></div>
@@ -105,6 +106,7 @@ export default function Home() {
             </article>
           ))}
         </div>
+        <p className="mobile-swipe-hint">Плъзни за MINI и BRICK →</p>
         <p className="price-clarifier">Зачеркнатите стойности са планираните редовни цени след стартовия период.</p>
       </section>
 
