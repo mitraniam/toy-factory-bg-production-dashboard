@@ -78,12 +78,6 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="popme-quick-flow" aria-label="Как работи POPME">
-        <div><b>01</b><strong>Качи снимка</strong></div>
-        <div><b>02</b><strong>Виж себе си в 3D</strong></div>
-        <div><b>03</b><strong>Одобри и поръчай</strong></div>
-      </section>
-
       <section className="popme-styles" id="styles">
         <div className="popme-section-head split-head">
           <div><p>ИЗБЕРИ СВОЯ СТИЛ</p><h2>Три версии.<br />Все още ти.</h2></div>
