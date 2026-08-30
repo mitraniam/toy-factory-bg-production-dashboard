@@ -84,6 +84,8 @@ export async function POST(request: NextRequest) {
         shipping_city: order.shipping_address?.city || null,
       });
 
+      // Duplicate webhook deliveries are expected. A project already claimed
+      // by the first delivery is intentionally treated as successfully handled.
       if (!claimed) continue;
 
       try {
@@ -97,6 +99,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  if (failures.length) console.error("orders/paid processing failures", failures);
-  return new NextResponse(failures.length ? "Recorded with production errors" : "OK", { status: 200 });
+  if (failures.length) {
+    console.error("orders/paid processing failures", failures);
+    // Non-2xx is deliberate: Shopify should retry transient delivery/DB failures.
+    // Idempotent project claims prevent the retry from launching duplicate work.
+    return new NextResponse("Temporary processing failure", { status: 500 });
+  }
+
+  return new NextResponse("OK", { status: 200 });
 }
