@@ -5,6 +5,7 @@ import "./globals.css";
 import "./popme.css";
 import "./popme-v2.css";
 import "./popme-v3.css";
+import "./popme-clean.css";
 
 const displayFont = Sofia_Sans_Extra_Condensed({
   subsets: ["cyrillic", "latin"],
