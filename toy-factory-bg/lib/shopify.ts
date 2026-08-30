@@ -17,7 +17,7 @@ mutation CartCreate($input: CartInput!) {
           quantity
           attributes { key value }
           merchandise {
-            ... on ProductVariant { id title }
+            ... on ProductVariant { id title price { amount currencyCode } }
           }
         }
       }
@@ -37,14 +37,29 @@ query ProductVariantsByHandle($handle: String!) {
         id
         title
         availableForSale
+        price { amount currencyCode }
         selectedOptions { name value }
       }
     }
   }
 }`;
 
+const VARIANT_QUERY = `#graphql
+query ProductVariantById($id: ID!) {
+  node(id: $id) {
+    ... on ProductVariant {
+      id
+      title
+      availableForSale
+      price { amount currencyCode }
+    }
+  }
+}`;
+
+type Money = { amount: string; currencyCode: string };
 type StorefrontResponse<T> = { data?: T; errors?: Array<{ message: string }> };
 export type ToySize = "10" | "15" | "20";
+export type ToyStyle = "pop" | "mini" | "brick";
 
 function normalizeShopDomain(value: string) {
   return value.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0];
@@ -87,16 +102,25 @@ function directVariantId(size: ToySize) {
   return value;
 }
 
-async function resolveVariantId(size: ToySize, buyerIp?: string | null) {
+type ResolvedVariant = { id: string; price: Money };
+
+async function resolveVariant(size: ToySize, buyerIp?: string | null): Promise<ResolvedVariant> {
   const direct = directVariantId(size);
-  if (direct) return direct;
+  if (direct) {
+    const data = await storefrontRequest<{
+      node?: { id: string; title: string; availableForSale: boolean; price: Money } | null;
+    }>(VARIANT_QUERY, { id: direct }, buyerIp);
+    if (!data.node) throw new Error(`Shopify variant for ${size} cm was not found.`);
+    if (!data.node.availableForSale) throw new Error(`The '${size} cm' Shopify variant is not available for sale.`);
+    return { id: data.node.id, price: data.node.price };
+  }
 
   const handle = process.env.SHOPIFY_PRODUCT_HANDLE;
   if (!handle) throw new Error(`Set SHOPIFY_VARIANT_${size}CM or SHOPIFY_PRODUCT_HANDLE.`);
 
   const data = await storefrontRequest<{
     product?: {
-      variants: { nodes: Array<{ id: string; title: string; availableForSale: boolean; selectedOptions: Array<{ name: string; value: string }> }> };
+      variants: { nodes: Array<{ id: string; title: string; availableForSale: boolean; price: Money; selectedOptions: Array<{ name: string; value: string }> }> };
     } | null;
   }>(PRODUCT_VARIANTS_QUERY, { handle }, buyerIp);
 
@@ -110,14 +134,20 @@ async function resolveVariantId(size: ToySize, buyerIp?: string | null) {
   });
   if (!variant) throw new Error(`No Shopify variant matching '${size} cm' was found on product '${handle}'.`);
   if (!variant.availableForSale) throw new Error(`The '${size} cm' Shopify variant is not available for sale.`);
-  return variant.id;
+  return { id: variant.id, price: variant.price };
 }
 
-export async function createToyCheckout(input: { size: ToySize; projectId: string; buyerIp?: string | null }) {
-  const merchandiseId = await resolveVariantId(input.size, input.buyerIp);
+export async function createToyCheckout(input: {
+  size: ToySize;
+  style: ToyStyle;
+  projectId: string;
+  buyerIp?: string | null;
+}) {
+  const variant = await resolveVariant(input.size, input.buyerIp);
+  const styleLabel = input.style.toUpperCase();
   const data = await storefrontRequest<{
     cartCreate?: {
-      cart?: { id: string; checkoutUrl: string; totalQuantity: number; cost?: { totalAmount?: { amount: string; currencyCode: string } } } | null;
+      cart?: { id: string; checkoutUrl: string; totalQuantity: number; cost?: { totalAmount?: Money } } | null;
       userErrors?: Array<{ field?: string[] | null; message: string; code?: string | null }>;
       warnings?: Array<{ code?: string | null; target?: string | null; message: string }>;
     };
@@ -125,8 +155,20 @@ export async function createToyCheckout(input: { size: ToySize; projectId: strin
     CART_CREATE_MUTATION,
     {
       input: {
-        lines: [{ quantity: 1, merchandiseId, attributes: [{ key: "Project ID", value: input.projectId }] }],
-        attributes: [{ key: "toy_project_id", value: input.projectId }],
+        lines: [{
+          quantity: 1,
+          merchandiseId: variant.id,
+          attributes: [
+            { key: "Project ID", value: input.projectId },
+            { key: "Style", value: styleLabel },
+            { key: "Size", value: `${input.size} cm` },
+          ],
+        }],
+        attributes: [
+          { key: "toy_project_id", value: input.projectId },
+          { key: "toy_style", value: styleLabel },
+          { key: "toy_size", value: `${input.size} cm` },
+        ],
       },
     },
     input.buyerIp
@@ -135,5 +177,12 @@ export async function createToyCheckout(input: { size: ToySize; projectId: strin
   const result = data.cartCreate;
   if (result?.userErrors?.length) throw new Error(result.userErrors.map((error) => error.message).join("; "));
   if (!result?.cart?.id || !result.cart.checkoutUrl) throw new Error("Shopify did not return a cart and checkout URL.");
-  return { cartId: result.cart.id, checkoutUrl: result.cart.checkoutUrl, totalQuantity: result.cart.totalQuantity, total: result.cart.cost?.totalAmount, warnings: result.warnings || [] };
+  return {
+    cartId: result.cart.id,
+    checkoutUrl: result.cart.checkoutUrl,
+    totalQuantity: result.cart.totalQuantity,
+    total: result.cart.cost?.totalAmount,
+    unitPrice: variant.price,
+    warnings: result.warnings || [],
+  };
 }
