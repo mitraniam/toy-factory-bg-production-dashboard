@@ -8,9 +8,12 @@ export type ProjectStatus =
   | "CHECKOUT_CREATED"
   | "CHECKOUT_FAILED"
   | "PAID_BUILD_STARTING"
+  | "BUILD_SUBMITTING"
   | "3D_GENERATING"
   | "BUILD_FAILED"
+  | "MODEL_RESIZE_SUBMITTING"
   | "MODEL_RESIZING"
+  | "PRINT_FILE_SUBMITTING"
   | "PRINT_FILE_GENERATING"
   | "PRINT_FILE_FAILED"
   | "READY_FOR_PRINT"
@@ -24,9 +27,12 @@ export const PROJECT_STATUSES: ProjectStatus[] = [
   "CHECKOUT_CREATED",
   "CHECKOUT_FAILED",
   "PAID_BUILD_STARTING",
+  "BUILD_SUBMITTING",
   "3D_GENERATING",
   "BUILD_FAILED",
+  "MODEL_RESIZE_SUBMITTING",
   "MODEL_RESIZING",
+  "PRINT_FILE_SUBMITTING",
   "PRINT_FILE_GENERATING",
   "PRINT_FILE_FAILED",
   "READY_FOR_PRINT",
@@ -114,6 +120,30 @@ export async function updateProject(id: string, patch: Partial<ToyProject>) {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
+  })) as ToyProject[];
+  return rows?.[0] || null;
+}
+
+/**
+ * Atomically claims a production transition by updating only when the project
+ * is still in the expected status. Concurrent webhook/manual sync calls will
+ * therefore have exactly one winner before an external Meshy task is created.
+ */
+export async function claimProjectTransition(
+  id: string,
+  fromStatus: ProjectStatus,
+  toStatus: ProjectStatus,
+  patch: Partial<ToyProject> = {}
+) {
+  const path = `toy_projects?id=eq.${encodeURIComponent(id)}&status=eq.${encodeURIComponent(fromStatus)}`;
+  const rows = (await supabaseRest(path, {
+    method: "PATCH",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      ...patch,
+      status: toStatus,
+      updated_at: new Date().toISOString(),
+    }),
   })) as ToyProject[];
   return rows?.[0] || null;
 }
