@@ -1,5 +1,5 @@
 -- POPME production hardening migration — 2026-08-30
--- Run once in the Supabase SQL Editor before deploying the matching app code.
+-- Safe to re-run in the Supabase SQL Editor before deploying the matching app code.
 
 alter table public.toy_projects drop constraint if exists toy_projects_status_check;
 alter table public.toy_projects add constraint toy_projects_status_check check (
@@ -77,3 +77,5 @@ end;
 $$;
 
 revoke all on function public.consume_api_rate_limit(text, text, integer, integer) from public;
+revoke all on function public.consume_api_rate_limit(text, text, integer, integer) from anon, authenticated;
+grant execute on function public.consume_api_rate_limit(text, text, integer, integer) to service_role;
