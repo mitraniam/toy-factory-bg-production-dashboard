@@ -7,12 +7,6 @@ import { archiveRemoteAsset } from "@/lib/storage";
 
 export const runtime = "nodejs";
 
-const PRICES: Record<ToySize, number> = {
-  "10": 49,
-  "15": 69,
-  "20": 89,
-};
-
 function isToySize(value: unknown): value is ToySize {
   return value === "10" || value === "15" || value === "20";
 }
@@ -72,6 +66,20 @@ export async function POST(request: NextRequest) {
     const newProjectId = randomUUID();
     projectId = newProjectId;
 
+    // Shopify is the single source of truth for the sell price. We resolve the
+    // selected variant, create the hosted checkout and persist that exact price.
+    const cart = await createToyCheckout({
+      size,
+      style: modelKind,
+      projectId: newProjectId,
+      buyerIp: getBuyerIp(request),
+    });
+
+    const price = Number(cart.unitPrice?.amount);
+    if (!Number.isFinite(price) || price < 0 || cart.unitPrice?.currencyCode !== "EUR") {
+      throw new Error("Shopify variant price must be a valid EUR amount.");
+    }
+
     await createProject({
       id: newProjectId,
       model_kind: modelKind,
@@ -79,9 +87,9 @@ export async function POST(request: NextRequest) {
       preview_url: previewUrl,
       preview_storage_path: null,
       size_cm: Number(size),
-      price_eur: PRICES[size],
+      price_eur: price,
       status: "CHECKOUT_CREATED",
-      shopify_cart_id: null,
+      shopify_cart_id: cart.cartId,
       shopify_order_id: null,
       shopify_order_name: null,
       shopify_webhook_id: null,
@@ -111,29 +119,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    try {
-      const cart = await createToyCheckout({
-        size,
-        projectId: newProjectId,
-        buyerIp: getBuyerIp(request),
-      });
-
-      await updateProject(newProjectId, { shopify_cart_id: cart.cartId });
-
-      return NextResponse.json({
-        projectId: newProjectId,
-        checkoutUrl: cart.checkoutUrl,
-        total: cart.total,
-      });
-    } catch (error) {
-      await updateProject(newProjectId, {
+    return NextResponse.json({
+      projectId: newProjectId,
+      checkoutUrl: cart.checkoutUrl,
+      total: cart.total,
+      price: cart.unitPrice,
+    });
+  } catch (error) {
+    console.error("checkout error", { projectId, error });
+    if (projectId) {
+      await updateProject(projectId, {
         status: "CHECKOUT_FAILED",
         last_error: error instanceof Error ? error.message : "Shopify checkout failed",
       }).catch(() => null);
-      throw error;
     }
-  } catch (error) {
-    console.error("checkout error", { projectId, error });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Не успяхме да създадем checkout." },
       { status: 500 }
