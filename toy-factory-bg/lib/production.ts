@@ -1,5 +1,12 @@
 import { createBuild, createMultiColorPrint, createResize, getMultiColorPrint, getResize, getTask } from "@/lib/meshy";
-import { getProject, listProjectsByStatuses, ProjectStatus, ToyProject, updateProject } from "@/lib/projects";
+import {
+  claimProjectTransition,
+  getProject,
+  listProjectsByStatuses,
+  ProjectStatus,
+  ToyProject,
+  updateProject,
+} from "@/lib/projects";
 import { archiveBytes, archiveRemoteAsset } from "@/lib/storage";
 import { resizeThreeMfToHeight } from "@/lib/three-mf";
 
@@ -45,11 +52,19 @@ async function archiveExactSizeThreeMf(project: ToyProject, sourceUrl: string) {
   });
 }
 
+async function freshProject(id: string, fallback: ToyProject) {
+  return (await getProject(id)) || fallback;
+}
+
 export async function syncProject(input: string | ToyProject) {
   let project = typeof input === "string" ? await getProject(input) : input;
   if (!project) throw new Error("Project not found.");
 
   if (project.status === "PAID_BUILD_STARTING") {
+    const claimed = await claimProjectTransition(project.id, "PAID_BUILD_STARTING", "BUILD_SUBMITTING", { last_error: null });
+    if (!claimed) return freshProject(project.id, project);
+    project = claimed;
+
     try {
       const buildTaskId = await createBuild(project.model_kind || "pop", project.prototype_task_id);
       project = (await updateProject(project.id, {
@@ -81,6 +96,14 @@ export async function syncProject(input: string | ToyProject) {
           last_error: "Meshy build succeeded but no GLB URL was returned.",
         });
       }
+
+      const claimed = await claimProjectTransition(project.id, "3D_GENERATING", "MODEL_RESIZE_SUBMITTING", {
+        glb_url: glbUrl,
+        last_error: null,
+      });
+      if (!claimed) return freshProject(project.id, project);
+      project = claimed;
+
       try {
         const resizeTaskId = await createResize(glbUrl, project.size_cm);
         project = (await updateProject(project.id, {
@@ -115,6 +138,14 @@ export async function syncProject(input: string | ToyProject) {
           last_error: "Meshy resize succeeded but no GLB URL was returned.",
         });
       }
+
+      const claimed = await claimProjectTransition(project.id, "MODEL_RESIZING", "PRINT_FILE_SUBMITTING", {
+        glb_url: resizedGlb,
+        last_error: null,
+      });
+      if (!claimed) return freshProject(project.id, project);
+      project = claimed;
+
       try {
         const glbStoragePath = await archiveGlb(project, resizedGlb);
         const printTaskId = await createMultiColorPrint(resizedGlb);
@@ -173,7 +204,12 @@ export async function syncProject(input: string | ToyProject) {
 }
 
 export async function syncActiveProjects(limit = 40) {
-  const active: ProjectStatus[] = ["PAID_BUILD_STARTING", "3D_GENERATING", "MODEL_RESIZING", "PRINT_FILE_GENERATING"];
+  const active: ProjectStatus[] = [
+    "PAID_BUILD_STARTING",
+    "3D_GENERATING",
+    "MODEL_RESIZING",
+    "PRINT_FILE_GENERATING",
+  ];
   const projects = await listProjectsByStatuses(active, limit);
   const results: Array<{ id: string; ok: boolean; status?: string; error?: string }> = [];
   for (const project of projects) {
@@ -191,28 +227,46 @@ export async function syncActiveProjects(limit = 40) {
 
 export async function retryProject(project: ToyProject) {
   if (project.status === "BUILD_FAILED") {
-    const buildTaskId = await createBuild(project.model_kind || "pop", project.prototype_task_id);
-    return updateProject(project.id, {
-      status: "3D_GENERATING",
-      build_task_id: buildTaskId,
-      resize_task_id: null,
-      print_task_id: null,
-      three_mf_url: null,
-      three_mf_storage_path: null,
-      last_error: null,
-    });
+    const claimed = await claimProjectTransition(project.id, "BUILD_FAILED", "BUILD_SUBMITTING", { last_error: null });
+    if (!claimed) return freshProject(project.id, project);
+    try {
+      const buildTaskId = await createBuild(project.model_kind || "pop", project.prototype_task_id);
+      return updateProject(project.id, {
+        status: "3D_GENERATING",
+        build_task_id: buildTaskId,
+        resize_task_id: null,
+        print_task_id: null,
+        three_mf_url: null,
+        three_mf_storage_path: null,
+        last_error: null,
+      });
+    } catch (error) {
+      return updateProject(project.id, {
+        status: "BUILD_FAILED",
+        last_error: error instanceof Error ? error.message : "Meshy build retry failed",
+      });
+    }
   }
   if (project.status === "PRINT_FILE_FAILED") {
     if (!project.glb_url) throw new Error("GLB URL is missing; retry the 3D build instead.");
-    const resizeTaskId = await createResize(project.glb_url, project.size_cm);
-    return updateProject(project.id, {
-      status: "MODEL_RESIZING",
-      resize_task_id: resizeTaskId,
-      print_task_id: null,
-      three_mf_url: null,
-      three_mf_storage_path: null,
-      last_error: null,
-    });
+    const claimed = await claimProjectTransition(project.id, "PRINT_FILE_FAILED", "MODEL_RESIZE_SUBMITTING", { last_error: null });
+    if (!claimed) return freshProject(project.id, project);
+    try {
+      const resizeTaskId = await createResize(project.glb_url, project.size_cm);
+      return updateProject(project.id, {
+        status: "MODEL_RESIZING",
+        resize_task_id: resizeTaskId,
+        print_task_id: null,
+        three_mf_url: null,
+        three_mf_storage_path: null,
+        last_error: null,
+      });
+    } catch (error) {
+      return updateProject(project.id, {
+        status: "PRINT_FILE_FAILED",
+        last_error: error instanceof Error ? error.message : "Resize retry failed",
+      });
+    }
   }
   throw new Error("This project is not in a retryable state.");
 }
