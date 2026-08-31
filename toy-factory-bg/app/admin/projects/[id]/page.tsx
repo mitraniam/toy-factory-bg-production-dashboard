@@ -21,8 +21,12 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   if (!project) notFound();
   const meta = STATUS_META[project.status];
   const model = modelLabel(project.model_kind);
-  const glbLink = project.glb_storage_path ? `/api/admin/projects/${project.id}/asset?kind=glb` : null;
-  const threeMfLink = project.three_mf_storage_path ? `/api/admin/projects/${project.id}/asset?kind=3mf` : null;
+
+  const canRecoverGlb = Boolean(project.glb_storage_path || project.resize_task_id || project.build_task_id || project.glb_url);
+  const canRecoverThreeMf = Boolean(project.three_mf_storage_path || project.print_task_id || project.three_mf_url);
+  const glbLink = canRecoverGlb ? `/api/admin/projects/${project.id}/asset?kind=glb` : null;
+  const threeMfLink = canRecoverThreeMf ? `/api/admin/projects/${project.id}/asset?kind=3mf` : null;
+  const previewLink = `/api/admin/projects/${project.id}/preview`;
 
   return (
     <main className="admin-shell project-shell">
@@ -41,17 +45,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <section className="project-grid">
         <div className="project-card preview-card">
           <div className="project-card-head"><span>Approved preview</span><small>Meshy {model} prototype</small></div>
-          <img src={project.preview_url} alt={`Approved ${model} figure preview`} />
-          <p className="file-note">Preview фонът е илюстративен и не е част от крайния 3D продукт.</p>
+          <img src={previewLink} alt={`Approved ${model} figure preview`} />
+          <p className="file-note">При стар проект preview-то се възстановява от Meshy при първо отваряне и после се пази в private Supabase Storage.</p>
         </div>
 
         <div className="project-card">
           <div className="project-card-head"><span>Production files</span><small>Private permanent archive</small></div>
           <div className="file-list">
-            <div><div><strong>GLB 3D model</strong><small>{project.glb_storage_path ? "Archived in Supabase Storage" : project.build_task_id || "Build not started"}</small></div>{glbLink ? <a href={glbLink}>Download GLB ↓</a> : <span>Not ready</span>}</div>
+            <div><div><strong>GLB 3D model</strong><small>{project.glb_storage_path ? "Archived in Supabase Storage" : project.resize_task_id || project.build_task_id || "Build not started"}</small></div>{glbLink ? <a href={glbLink}>Download GLB ↓</a> : <span>Not ready</span>}</div>
             <div><div><strong>Multi-color 3MF</strong><small>{project.three_mf_storage_path ? "Archived in Supabase Storage" : project.print_task_id || "Print task not started"}</small></div>{threeMfLink ? <a href={threeMfLink}>Download 3MF ↓</a> : <span>Not ready</span>}</div>
           </div>
-          <p className="file-note">Файловете се подават през защитен admin download endpoint. Private Supabase Storage URL не се излага директно в браузъра.</p>
+          <p className="file-note">За стари поръчки липсващият архив се възстановява от съществуващите Meshy task ID-та при първото изтегляне и след това остава постоянно в private Supabase Storage.</p>
         </div>
 
         <div className="project-card details-card">
