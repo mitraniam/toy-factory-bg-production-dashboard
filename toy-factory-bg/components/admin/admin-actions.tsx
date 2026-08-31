@@ -49,11 +49,13 @@ export function ProjectActions({
   status,
   notes,
   trackingNumber,
+  canRegenerateThreeMf = false,
 }: {
   projectId: string;
   status: ProjectStatus;
   notes?: string | null;
   trackingNumber?: string | null;
+  canRegenerateThreeMf?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -62,7 +64,7 @@ export function ProjectActions({
     MANUAL_PRODUCTION_STATUSES.includes(status) ? status : "READY_FOR_PRINT"
   );
 
-  async function action(kind: "sync" | "retry") {
+  async function action(kind: "sync" | "retry" | "regenerate-3mf") {
     setBusy(kind);
     setError("");
     try {
@@ -105,7 +107,16 @@ export function ProjectActions({
             {busy === "retry" ? "Retrying…" : "Retry failed step"}
           </button>
         )}
+        {canRegenerateThreeMf && (
+          <button className="admin-button danger-outline" onClick={() => action("regenerate-3mf")} disabled={Boolean(busy)}>
+            {busy === "regenerate-3mf" ? "Starting 3MF…" : "Regenerate expired 3MF"}
+          </button>
+        )}
       </div>
+
+      {canRegenerateThreeMf && (
+        <p className="file-note">Legacy 3MF линкът е изтекъл. Regenerate expired 3MF стартира нов Meshy multi-color print task и използва Meshy credits.</p>
+      )}
 
       <form className="production-form" onSubmit={save}>
         <label>
