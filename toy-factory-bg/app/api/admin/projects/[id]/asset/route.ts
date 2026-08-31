@@ -32,6 +32,22 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const config = ASSETS[kind];
   let path = project[config.field];
 
+  // Old Meshy 3MF file URLs are short-lived and commonly return 403 after
+  // the order has aged. Do not keep presenting that broken URL as a download.
+  // The admin has an explicit regeneration action which creates a fresh 3MF
+  // and archives it permanently in Supabase Storage.
+  if (!path && kind === "3mf") {
+    return NextResponse.json(
+      {
+        error: "This legacy 3MF was never archived and the old Meshy file has expired. Use Regenerate 3MF in Production control.",
+        code: "LEGACY_3MF_REGEN_REQUIRED",
+      },
+      { status: 409 }
+    );
+  }
+
+  // GLB recovery is still worth attempting because an old resize/build task
+  // may return a usable model that we can immediately archive.
   if (!path) {
     try {
       path = await ensureProjectAssetArchived(project, kind);
