@@ -57,6 +57,7 @@ export default function Home() {
         </div>
 
         <div className="clean-hero-visual" aria-label="POPME стилове">
+          <div className="clean-hero-pedestal" aria-hidden="true" />
           <a className="clean-hero-card coral" href="/create?style=pop"><img src="/marketing/pop-card.svg" alt="POP стил" /><b>POP</b></a>
           <a className="clean-hero-card blue featured" href="/create?style=mini"><img src="/marketing/mini.svg" alt="MINI стил" /><b>MINI</b></a>
           <a className="clean-hero-card lime" href="/create?style=brick"><img src="/marketing/brick.svg" alt="BRICK стил" /><b>BRICK</b></a>
@@ -77,7 +78,7 @@ export default function Home() {
                 <div className="clean-style-price"><strong>от €49</strong><small>10 / 15 / 20 cm</small></div>
                 <a href={`/create?style=${style.key}`}>ИЗБЕРИ {style.name} →</a>
               </div>
-              <img src={style.image} alt={`${style.name} POPME фигурка`} />
+              <div className="clean-style-visual"><img src={style.image} alt={`${style.name} POPME фигурка`} /></div>
             </article>
           ))}
         </div>
@@ -97,15 +98,16 @@ export default function Home() {
 
       <section className="clean-proof">
         <div className="clean-proof-copy">
-          <p>ПЪРВО ВИЖДАШ</p>
-          <h2>Не плащаш на сляпо.</h2>
-          <span>Харесваш визуализацията, избираш 10, 15 или 20 cm и чак тогава поръчваш.</span>
+          <p>ВИЗУАЛИЗАЦИЯ ПРЕДИ ПЛАЩАНЕ</p>
+          <h2>Виж я. Харесай я. После поръчай.</h2>
+          <span>Не плащаш на сляпо. Първо виждаш своя POPME, после избираш 10, 15 или 20 cm и продължаваш към плащане.</span>
+          <div className="clean-proof-points"><b>3 стила</b><b>3 размера</b><b>до 2 нови опита</b></div>
           <a href="/create">НАПРАВИ МЕ 3D →</a>
         </div>
-        <div className="clean-proof-visual">
-          <div className="clean-photo-placeholder"><span>ТВОЯТА<br />СНИМКА</span></div>
-          <div className="clean-proof-arrow">→</div>
-          <div className="clean-result-card"><img src="/marketing/mini.svg" alt="Примерна POPME визуализация" /><span>ТВОЯТ POPME</span></div>
+        <div className="clean-preview-showcase">
+          <div className="clean-preview-label"><span>ПРИМЕРНА AI ВИЗУАЛИЗАЦИЯ</span><b>MINI</b></div>
+          <img src="/marketing/mini.svg" alt="Примерна MINI POPME визуализация" />
+          <div className="clean-preview-meta"><span>PREVIEW</span><strong>Преди плащане</strong></div>
         </div>
       </section>
 
@@ -120,7 +122,7 @@ export default function Home() {
 
       <section className="clean-final">
         <div><p>ГОТОВ ЛИ СИ?</p><h2>Една снимка.<br />Твоята фигурка.</h2></div>
-        <div className="clean-final-action"><strong>от €49</strong><a href="/create">СЪЗДАЙ СВОЯТА СЕГА →</a></div>
+        <div className="clean-final-action"><div><strong>от €49</strong><small>визуализация преди плащане</small></div><a href="/create">СЪЗДАЙ СВОЯТА СЕГА →</a></div>
       </section>
 
       <footer className="clean-footer">
