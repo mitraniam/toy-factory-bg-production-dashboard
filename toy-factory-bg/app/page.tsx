@@ -35,6 +35,8 @@ const faqs = [
 export default function Home() {
   return (
     <main className="popme-site popme-clean-home">
+      <div className="mobile-announcement">PREVIEW ПРЕДИ ПЛАЩАНЕ · СТАРТОВИ ЦЕНИ ОТ €49</div>
+
       <nav className="clean-nav" id="top">
         <a className="clean-logo" href="#top" aria-label="POPME начало">popme<span>✦</span></a>
         <div className="clean-nav-links">
@@ -63,6 +65,12 @@ export default function Home() {
           <a className="clean-hero-card lime" href="/create?style=brick"><img src="/marketing/brick.svg" alt="BRICK стил" /><b>BRICK</b></a>
         </div>
       </section>
+
+      <div className="mobile-trust-row" aria-label="POPME преимущества">
+        <span><b>3</b> стила</span>
+        <span><b>3</b> размера</span>
+        <span><b>2</b> нови опита</span>
+      </div>
 
       <section className="clean-styles" id="styles">
         <div className="clean-section-head">
@@ -130,6 +138,8 @@ export default function Home() {
         <p>Персонализирани 3D колекционерски фигурки · Made of you.</p>
         <small>© 2026 POPME</small>
       </footer>
+
+      <a className="mobile-shop-cta" href="/create"><span>СЪЗДАЙ ФИГУРКА</span><strong>от €49 →</strong></a>
     </main>
   );
 }
