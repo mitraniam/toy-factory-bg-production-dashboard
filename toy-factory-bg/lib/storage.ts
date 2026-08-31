@@ -12,6 +12,10 @@ function safePathPart(value: string) {
   return value.replace(/[^a-zA-Z0-9._-]/g, "-");
 }
 
+function encodedObjectPath(path: string) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
 export function projectAssetPath(projectId: string, filename: string) {
   return `${safePathPart(projectId)}/${safePathPart(filename)}`;
 }
@@ -27,7 +31,7 @@ async function uploadBytes(path: string, bytes: ArrayBuffer | Uint8Array, conten
   const { url, key, bucket } = storageConfig();
   const body = new Blob([toArrayBuffer(bytes)], { type: contentType });
 
-  const upload = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`, {
+  const upload = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}/${encodedObjectPath(path)}`, {
     method: "POST",
     headers: {
       apikey: key,
@@ -71,9 +75,38 @@ export async function archiveRemoteAsset(input: {
   return uploadBytes(path, bytes, contentType);
 }
 
+/**
+ * Fetches a private Storage object server-to-server with the service role.
+ * Admin downloads use this instead of exposing time-limited Storage URLs to
+ * the browser, which avoids expired/invalid signed-link failures.
+ */
+export async function fetchPrivateAsset(path: string) {
+  const { url, key, bucket } = storageConfig();
+  const response = await fetch(
+    `${url}/storage/v1/object/authenticated/${encodeURIComponent(bucket)}/${encodedObjectPath(path)}`,
+    {
+      method: "GET",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    const responseBody = await response.text().catch(() => "");
+    throw new Error(
+      `Could not read private asset from Supabase Storage (${response.status})${responseBody ? `: ${responseBody}` : ""}`
+    );
+  }
+
+  return response;
+}
+
 export async function createSignedAssetUrl(path: string, expiresIn = 3600) {
   const { url, key, bucket } = storageConfig();
-  const response = await fetch(`${url}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${path.split("/").map(encodeURIComponent).join("/")}`, {
+  const response = await fetch(`${url}/storage/v1/object/sign/${encodeURIComponent(bucket)}/${encodedObjectPath(path)}`, {
     method: "POST",
     headers: {
       apikey: key,
