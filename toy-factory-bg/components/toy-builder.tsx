@@ -2,7 +2,7 @@
 
 import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 
-type Step = "upload" | "generating" | "preview" | "order";
+type Step = "upload" | "generating" | "preview";
 type ModelKind = "pop" | "mini" | "brick";
 
 type PrototypeTask = {
@@ -27,17 +27,17 @@ const MAX_REGENERATIONS = 2;
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
 const PREVIEW_STORAGE_KEY = "popme-preview-session";
 
-const MODEL_OPTIONS: Array<{ value: ModelKind; name: string; subtitle: string }> = [
-  { value: "pop", name: "POP", subtitle: "Vinyl collectible" },
-  { value: "mini", name: "MINI", subtitle: "Chibi figure" },
-  { value: "brick", name: "BRICK", subtitle: "Brick-style figure" },
+const MODEL_OPTIONS: Array<{
+  value: ModelKind;
+  name: string;
+  subtitle: string;
+  image: string;
+  copy: string;
+}> = [
+  { value: "pop", name: "POP", subtitle: "Vinyl", image: "/marketing/pop.svg", copy: "Vinyl визия с по-голяма глава и опростени форми." },
+  { value: "mini", name: "MINI", subtitle: "Chibi", image: "/marketing/mini.svg", copy: "Chibi визия с по-мек силует и повече характер." },
+  { value: "brick", name: "BRICK", subtitle: "Brick", image: "/marketing/brick.svg", copy: "Геометрична brick-style версия, създадена по твоята снимка." },
 ];
-
-const MODEL_COPY: Record<ModelKind, { title: string; text: string }> = {
-  pop: { title: "Колекционерска POP фигурка", text: "Vinyl визия с по-голяма глава и опростени форми." },
-  mini: { title: "Колекционерска MINI фигурка", text: "Chibi визия с по-мек силует и повече характер." },
-  brick: { title: "Колекционерска BRICK фигурка", text: "Геометрична brick-style версия, създадена по твоята снимка." },
-};
 
 function isModelKind(value: string | null): value is ModelKind {
   return value === "pop" || value === "mini" || value === "brick";
@@ -93,6 +93,8 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
 
   const mockMode = process.env.NEXT_PUBLIC_MOCK_AI === "true";
   const price = useMemo(() => (size === "10" ? 49 : size === "20" ? 89 : 69), [size]);
+  const selectedModel = MODEL_OPTIONS.find((item) => item.value === modelKind) || MODEL_OPTIONS[0];
+  const attemptsLeft = Math.max(0, MAX_REGENERATIONS - regenerations);
 
   useEffect(() => {
     if (initialView === "preview") {
@@ -123,7 +125,13 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
   }, [initialView]);
 
   function storePreview(image: string, taskId: string, nextRegenerations = regenerations) {
-    const payload: StoredPreview = { sourceImage: sourceImage || "", previewImage: image, prototypeTaskId: taskId, modelKind, regenerations: nextRegenerations };
+    const payload: StoredPreview = {
+      sourceImage: sourceImage || "",
+      previewImage: image,
+      prototypeTaskId: taskId,
+      modelKind,
+      regenerations: nextRegenerations,
+    };
     sessionStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(payload));
   }
 
@@ -162,8 +170,15 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
     setPrototypeTaskId(null);
   }
 
-  async function handleInput(event: ChangeEvent<HTMLInputElement>) { await acceptFile(event.target.files?.[0]); }
-  async function handleDrop(event: DragEvent<HTMLDivElement>) { event.preventDefault(); setDragging(false); await acceptFile(event.dataTransfer.files?.[0]); }
+  async function handleInput(event: ChangeEvent<HTMLInputElement>) {
+    await acceptFile(event.target.files?.[0]);
+  }
+
+  async function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    setDragging(false);
+    await acceptFile(event.dataTransfer.files?.[0]);
+  }
 
   async function generatePreview(isRegeneration = false) {
     if (!sourceImage) return setError("Първо качи снимка.");
@@ -178,7 +193,10 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
 
     try {
       if (mockMode) {
-        for (const p of [22, 43, 67, 84, 100]) { await sleep(260); setProgress(p); }
+        for (const p of [22, 43, 67, 84, 100]) {
+          await sleep(260);
+          setProgress(p);
+        }
         completePreview(sourceImage, "mock-prototype-task", nextRegenerations);
         return;
       }
@@ -205,7 +223,9 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
           completePreview(image, data.taskId, nextRegenerations);
           return;
         }
-        if (["FAILED", "EXPIRED", "CANCELED"].includes(task.status || "")) throw new Error(task.task_error?.message || "Генерацията не успя. Опитай с друга снимка.");
+        if (["FAILED", "EXPIRED", "CANCELED"].includes(task.status || "")) {
+          throw new Error(task.task_error?.message || "Генерацията не успя. Опитай с друга снимка.");
+        }
       }
       throw new Error("Генерацията отне твърде дълго. Опитай отново.");
     } catch (e) {
@@ -222,7 +242,12 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
       const response = await fetch("/api/shopify/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prototypeTaskId, size, modelKind, previewImage: mockMode ? previewImage : undefined }),
+        body: JSON.stringify({
+          prototypeTaskId,
+          size,
+          modelKind,
+          previewImage: mockMode ? previewImage : undefined,
+        }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Не успяхме да създадем checkout.");
@@ -240,63 +265,153 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
       window.location.assign(`/create?style=${modelKind}`);
       return;
     }
-    setStep("upload"); setSourceImage(null); setPreviewImage(null); setPrototypeTaskId(null); setProgress(0); setConsent(false); setRegenerations(0); setError(null); setCheckoutLoading(false);
+    setStep("upload");
+    setSourceImage(null);
+    setPreviewImage(null);
+    setPrototypeTaskId(null);
+    setProgress(0);
+    setConsent(false);
+    setRegenerations(0);
+    setError(null);
+    setCheckoutLoading(false);
     if (inputRef.current) inputRef.current.value = "";
   }
 
-  if (!hydrated) return <section className="builder-shell builder-loading"><div className="spinner" /></section>;
+  if (!hydrated) {
+    return <section className="pmv2-builder-loading"><div className="pmv2-spinner" /><p>Зареждаме твоя POPME…</p></section>;
+  }
 
-  return (
-    <section className={`builder-shell builder-step-${step}`} id="create">
-      <div className="builder-header">
-        <p className="eyebrow">CUSTOM 3D COLLECTIBLE</p>
-        <h2>{step === "preview" || step === "order" ? "Това е твоят POPME." : "Избери стил. Качи снимка."}</h2>
-        <p className="subtle">{step === "preview" || step === "order" ? "Харесай визията, избери размер и поръчай." : "POP, MINI или BRICK — виждаш визуализацията преди плащане."}</p>
-      </div>
+  if (step === "generating") {
+    return (
+      <section className="pmv2-builder pmv2-generating">
+        <div className="pmv2-progress-copy">
+          <div className="pmv2-steps-mini"><b>1 СТИЛ</b><span>—</span><b>2 СНИМКА</b><span>—</span><strong>3 PREVIEW</strong></div>
+          <p>СЪЗДАВАМЕ ТВОЯ {modelKind.toUpperCase()}</p>
+          <h1>Малко магия.<br /><span>После си ти.</span></h1>
+          <div className="pmv2-progress-track"><i style={{ width: `${Math.max(8, Math.min(progress, 100))}%` }} /></div>
+          <div className="pmv2-progress-meta"><span>Генериране</span><strong>{Math.round(progress)}%</strong></div>
+          <p className="pmv2-progress-note">Остани на тази страница. Ще те прехвърлим автоматично към визуализацията.</p>
+          {error && <div className="pmv2-error">{error}</div>}
+        </div>
+        <div className={`pmv2-generating-figure ${modelKind}`}>
+          <img src={selectedModel.image} alt={`${selectedModel.name} стил`} />
+          <span>{selectedModel.name}</span>
+        </div>
+      </section>
+    );
+  }
 
-      <div className="builder-card">
-        <div className="steps" aria-label="Стъпки">
-          <span className={step === "upload" ? "active" : "done"}>1. Снимка</span>
-          <span className={step === "generating" || step === "preview" ? "active" : step === "order" ? "done" : ""}>2. Визуализация</span>
-          <span className={step === "order" ? "active" : ""}>3. Размер + плащане</span>
+  if (step === "preview" && previewImage) {
+    return (
+      <section className="pmv2-preview-builder">
+        <div className="pmv2-preview-visual-wrap">
+          <div className="pmv2-preview-visual">
+            <span className="pmv2-preview-style">{modelKind.toUpperCase()}</span>
+            <img src={previewImage} alt={`Твоята ${modelKind.toUpperCase()} POPME визуализация`} />
+          </div>
+          <div className="pmv2-preview-source-row">
+            {sourceImage && <img src={sourceImage} alt="Оригиналната качена снимка" />}
+            <p>Фонът е илюстративен и не е част от крайния 3D продукт.</p>
+          </div>
         </div>
 
-        {step === "upload" && (
-          <div className="panel-grid">
+        <div className="pmv2-preview-controls">
+          <p className="pmv2-builder-kicker">ТВОЯТ РЕЗУЛТАТ</p>
+          <h1>Това е<br /><span>твоят POPME.</span></h1>
+          <div className="pmv2-selected-style-line"><span>Стил</span><strong>{modelKind.toUpperCase()}</strong></div>
+
+          <div className="pmv2-size-selector">
+            <p>ИЗБЕРИ РАЗМЕР</p>
             <div>
-              <div className={`dropzone ${dragging ? "dragging" : ""}`} onDragOver={(e) => { e.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={handleDrop} onClick={() => inputRef.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}>
-                <input ref={inputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={handleInput} />
-                {sourceImage ? <img className="source-preview" src={sourceImage} alt="Качена снимка" /> : <div className="dropzone-copy"><div className="upload-icon">+</div><strong>Качи снимка</strong><span>JPG, PNG или WEBP · до 8 MB</span></div>}
+              {[{ value: "10", price: 49 }, { value: "15", price: 69 }, { value: "20", price: 89 }].map((option) => (
+                <button key={option.value} type="button" className={size === option.value ? "active" : ""} onClick={() => setSize(option.value)}>
+                  <strong>{option.value} cm</strong><span>€{option.price}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <ul className="pmv2-preview-benefits">
+            <li><span>✓</span>3D производството стартира след плащане</li>
+            <li><span>✓</span>Сигурно плащане през Shopify</li>
+          </ul>
+
+          {error && <div className="pmv2-error">{error}</div>}
+          <button type="button" className="pmv2-regenerate" onClick={() => generatePreview(true)} disabled={attemptsLeft <= 0}>
+            {attemptsLeft > 0 ? `Генерирай отново (${attemptsLeft} останали)` : "Няма останали нови опити"}
+          </button>
+          <button type="button" className="pmv2-reset-link" onClick={reset}>Качи друга снимка</button>
+        </div>
+
+        <div className="pmv2-preview-checkout-bar">
+          <div><span>{modelKind.toUpperCase()} · {size} CM</span><strong>€{price}</strong></div>
+          <button type="button" onClick={goToCheckout} disabled={checkoutLoading}>
+            {checkoutLoading ? "ОТВАРЯМЕ CHECKOUT…" : "ПОРЪЧАЙ МОЯТА ФИГУРКА →"}
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="pmv2-builder">
+      <div className="pmv2-builder-steps"><strong>1 СТИЛ</strong><span>—</span><strong>2 СНИМКА</strong><span>—</span><b>3 PREVIEW</b></div>
+      <h1>Избери стил.<br /><span>Качи снимка.</span></h1>
+
+      <div className="pmv2-builder-grid">
+        <div className="pmv2-style-picker">
+          <p className="pmv2-builder-kicker">СТЪПКА 1 · СТИЛ</p>
+          <div className="pmv2-style-picker-rail">
+            {MODEL_OPTIONS.map((option) => (
+              <button key={option.value} type="button" className={`${option.value} ${modelKind === option.value ? "active" : ""}`} onClick={() => chooseModelKind(option.value)}>
+                <div><img src={option.image} alt={`${option.name} стил`} /></div>
+                <strong>{option.name}</strong>
+                <span>{option.subtitle}</span>
+              </button>
+            ))}
+          </div>
+          <div className="pmv2-style-description">
+            <p>ИЗБРАН СТИЛ</p>
+            <strong>{selectedModel.name}</strong>
+            <span>{selectedModel.copy}</span>
+          </div>
+          <label className="pmv2-consent">
+            <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
+            <span>Имам право да използвам тази снимка за създаване на персонализирана фигурка.</span>
+          </label>
+        </div>
+
+        <div className="pmv2-upload-panel">
+          <p className="pmv2-builder-kicker">СТЪПКА 2 · СНИМКА</p>
+          <div
+            className={`pmv2-dropzone ${dragging ? "dragging" : ""}`}
+            onDragOver={(event) => { event.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => inputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => event.key === "Enter" && inputRef.current?.click()}
+          >
+            <input ref={inputRef} hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={handleInput} />
+            {sourceImage ? (
+              <img src={sourceImage} alt="Качена снимка" />
+            ) : (
+              <div className="pmv2-dropzone-copy">
+                <span>+</span>
+                <strong>Качи снимка</strong>
+                <small>JPG, PNG или WEBP · до 8 MB</small>
               </div>
-              <p className="photo-tip">Най-добър резултат: цял ръст, добро осветление и видимо лице.</p>
-            </div>
-
-            <div className="control-panel">
-              <div><p className="control-label">Стил</p><div className="size-options model-options">{MODEL_OPTIONS.map((option) => <button type="button" key={option.value} className={modelKind === option.value ? `size active model-${option.value}` : `size model-${option.value}`} onClick={() => chooseModelKind(option.value)}><strong>{option.name}</strong><span>{option.subtitle}</span></button>)}</div></div>
-              <div><p className="control-label">Твоята версия</p><h3>{MODEL_COPY[modelKind].title}</h3><p>{MODEL_COPY[modelKind].text}</p></div>
-              <div className="builder-price-note"><strong>От €49</strong><span>10 / 15 / 20 cm</span></div>
-              <label className="consent-row"><input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} /><span>Имам право да използвам тази снимка за създаване на персонализирана фигурка.</span></label>
-              {error && <div className="error-box">{error}</div>}
-              <button className="primary-button" disabled={!sourceImage || !consent} onClick={() => generatePreview()}>ГЕНЕРИРАЙ {modelKind.toUpperCase()} →</button>
-            </div>
+            )}
           </div>
-        )}
+          <p className="pmv2-photo-tip">Най-добър резултат: цял ръст, добро осветление и видимо лице.</p>
+          {error && <div className="pmv2-error">{error}</div>}
+        </div>
+      </div>
 
-        {step === "generating" && <div className="generating-panel"><div className="spinner" /><h3>Правим твоята {modelKind.toUpperCase()} фигурка…</h3><p>След малко ще те прехвърлим към визуализацията.</p><div className="progress-track"><div className="progress-bar" style={{ width: `${Math.min(progress, 100)}%` }} /></div><strong>{Math.round(progress)}%</strong></div>}
-
-        {step === "preview" && previewImage && (
-          <div className="panel-grid preview-grid dedicated-preview-grid">
-            <div className="comparison"><div><span>Твоята снимка</span><img src={sourceImage || ""} alt="Оригинална снимка" /></div><div><span>{modelKind.toUpperCase()} визуализация</span><img src={previewImage} alt="AI визуализация на фигурка" /></div></div>
-            <div className="control-panel"><div><p className="control-label">СТЪПКА 2</p><h3>Харесва ли ти?</h3><p>Това е одобрената визия, по която ще създадем 3D модела след плащане.</p><p className="preview-disclaimer">Фонът е илюстративен и не е част от крайния продукт.</p></div>{error && <div className="error-box">{error}</div>}<button className="primary-button" onClick={() => setStep("order")}>ДА, ИЗБИРАМ РАЗМЕР →</button><button className="secondary-button" onClick={() => generatePreview(true)} disabled={regenerations >= MAX_REGENERATIONS}>Генерирай отново ({MAX_REGENERATIONS - regenerations} останали)</button><button className="text-button" onClick={reset}>Качи друга снимка</button></div>
-          </div>
-        )}
-
-        {step === "order" && (
-          <div className="panel-grid order-grid">
-            <div className="approved-card"><div className="approved-badge">{modelKind.toUpperCase()} · ОДОБРЕНО</div><img src={previewImage || sourceImage || ""} alt="Одобрена визуализация" /></div>
-            <div className="control-panel"><div><p className="control-label">РАЗМЕР</p><div className="size-options">{[["10", "10 cm", "€49"], ["15", "15 cm", "€69"], ["20", "20 cm", "€89"]].map(([value, label, amount]) => <button type="button" key={value} className={size === value ? "size active" : "size"} onClick={() => setSize(value)}><strong>{label}</strong><span>{amount}</span></button>)}</div></div><div className="total-row"><span>Общо</span><strong>€{price}</strong></div>{error && <div className="error-box">{error}</div>}<button className="primary-button" disabled={checkoutLoading} onClick={goToCheckout}>{checkoutLoading ? "Отваряме плащането…" : "ПРОДЪЛЖИ КЪМ ПЛАЩАНЕ →"}</button><p className="security-note">Сигурно плащане през Shopify Checkout.</p><button className="text-button" onClick={() => setStep("preview")}>Назад към визуализацията</button></div>
-          </div>
-        )}
+      <div className="pmv2-generate-bar">
+        <div><span>СТИЛ</span><strong>{modelKind.toUpperCase()}</strong><small> · цени от €49</small></div>
+        <button type="button" onClick={() => generatePreview(false)}>ГЕНЕРИРАЙ МОЯТА {modelKind.toUpperCase()} →</button>
       </div>
     </section>
   );
