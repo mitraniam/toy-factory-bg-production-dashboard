@@ -24,6 +24,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const canRecoverGlb = Boolean(project.glb_storage_path || project.resize_task_id || project.build_task_id || project.glb_url);
   const canRecoverThreeMf = Boolean(project.three_mf_storage_path || project.print_task_id || project.three_mf_url);
+  const canRegenerateThreeMf = Boolean(!project.three_mf_storage_path && canRecoverGlb && project.status !== "PRINT_FILE_GENERATING");
   const glbLink = canRecoverGlb ? `/api/admin/projects/${project.id}/asset?kind=glb` : null;
   const threeMfLink = canRecoverThreeMf ? `/api/admin/projects/${project.id}/asset?kind=3mf` : null;
   const previewLink = `/api/admin/projects/${project.id}/preview`;
@@ -53,9 +54,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <div className="project-card-head"><span>Production files</span><small>Private permanent archive</small></div>
           <div className="file-list">
             <div><div><strong>GLB 3D model</strong><small>{project.glb_storage_path ? "Archived in Supabase Storage" : project.resize_task_id || project.build_task_id || "Build not started"}</small></div>{glbLink ? <a href={glbLink}>Download GLB ↓</a> : <span>Not ready</span>}</div>
-            <div><div><strong>Multi-color 3MF</strong><small>{project.three_mf_storage_path ? "Archived in Supabase Storage" : project.print_task_id || "Print task not started"}</small></div>{threeMfLink ? <a href={threeMfLink}>Download 3MF ↓</a> : <span>Not ready</span>}</div>
+            <div><div><strong>Multi-color 3MF</strong><small>{project.three_mf_storage_path ? "Archived in Supabase Storage" : project.status === "PRINT_FILE_GENERATING" ? "Regenerating in Meshy…" : project.print_task_id || "Print task not started"}</small></div>{project.three_mf_storage_path && threeMfLink ? <a href={threeMfLink}>Download 3MF ↓</a> : project.status === "PRINT_FILE_GENERATING" ? <span>Generating…</span> : threeMfLink ? <a href={threeMfLink}>Try legacy 3MF ↓</a> : <span>Not ready</span>}</div>
           </div>
-          <p className="file-note">За стари поръчки липсващият архив се възстановява от съществуващите Meshy task ID-та при първото изтегляне и след това остава постоянно в private Supabase Storage.</p>
+          <p className="file-note">Новите файлове се архивират постоянно. Ако стар Meshy 3MF URL вече връща 403, използвай Regenerate expired 3MF в Production control.</p>
         </div>
 
         <div className="project-card details-card">
@@ -76,7 +77,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
         <div className="project-card actions-card">
           <div className="project-card-head"><span>Production control</span><small>Internal only</small></div>
-          <ProjectActions projectId={project.id} status={project.status} notes={project.production_notes} trackingNumber={project.tracking_number} />
+          <ProjectActions
+            projectId={project.id}
+            status={project.status}
+            notes={project.production_notes}
+            trackingNumber={project.tracking_number}
+            canRegenerateThreeMf={canRegenerateThreeMf}
+          />
         </div>
       </section>
     </main>
