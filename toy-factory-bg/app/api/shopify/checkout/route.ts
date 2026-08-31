@@ -66,6 +66,17 @@ export async function POST(request: NextRequest) {
     const newProjectId = randomUUID();
     projectId = newProjectId;
 
+    // Archive the approved preview before we create a payable checkout. Meshy
+    // result URLs are time-limited, so an order must never depend only on them.
+    let previewStoragePath: string | null = null;
+    if (!previewUrl.startsWith("data:")) {
+      previewStoragePath = await archiveRemoteAsset({
+        projectId: newProjectId,
+        sourceUrl: previewUrl,
+        filename: "preview",
+      });
+    }
+
     // Shopify is the single source of truth for the sell price. We resolve the
     // selected variant, create the hosted checkout and persist that exact price.
     const cart = await createToyCheckout({
@@ -85,7 +96,7 @@ export async function POST(request: NextRequest) {
       model_kind: modelKind,
       prototype_task_id: prototypeTaskId,
       preview_url: previewUrl,
-      preview_storage_path: null,
+      preview_storage_path: previewStoragePath,
       size_cm: Number(size),
       price_eur: price,
       status: "CHECKOUT_CREATED",
@@ -103,21 +114,6 @@ export async function POST(request: NextRequest) {
       three_mf_storage_path: null,
       last_error: null,
     });
-
-    // Keep a permanent copy of the approved preview. This is best-effort so a
-    // temporary storage hiccup never blocks a customer from reaching checkout.
-    if (!previewUrl.startsWith("data:")) {
-      try {
-        const previewStoragePath = await archiveRemoteAsset({
-          projectId: newProjectId,
-          sourceUrl: previewUrl,
-          filename: "preview",
-        });
-        await updateProject(newProjectId, { preview_storage_path: previewStoragePath });
-      } catch (archiveError) {
-        console.error("preview archive failed", { projectId: newProjectId, archiveError });
-      }
-    }
 
     return NextResponse.json({
       projectId: newProjectId,
