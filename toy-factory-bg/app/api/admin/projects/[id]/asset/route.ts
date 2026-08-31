@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
 import { getProject } from "@/lib/projects";
 import { fetchPrivateAsset } from "@/lib/storage";
+import { ensureProjectAssetArchived } from "@/lib/project-assets";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,19 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const config = ASSETS[kind];
-  const path = project[config.field];
-  if (!path) return NextResponse.json({ error: "Asset is not archived yet" }, { status: 404 });
+  let path = project[config.field];
+
+  if (!path) {
+    try {
+      path = await ensureProjectAssetArchived(project, kind);
+    } catch (error) {
+      console.error("Legacy asset recovery failed", { projectId: id, kind, error });
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Could not recover legacy asset" },
+        { status: 404 }
+      );
+    }
+  }
 
   try {
     const storageResponse = await fetchPrivateAsset(path);
