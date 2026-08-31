@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { ProjectActions } from "@/components/admin/admin-actions";
 import { isAdminAuthenticated } from "@/lib/admin-auth";
 import { getProject } from "@/lib/projects";
-import { createSignedAssetUrl } from "@/lib/storage";
 import { STATUS_META } from "@/lib/status";
 
 export const dynamic = "force-dynamic";
@@ -22,11 +21,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   if (!project) notFound();
   const meta = STATUS_META[project.status];
   const model = modelLabel(project.model_kind);
-
-  const [glbLink, threeMfLink] = await Promise.all([
-    project.glb_storage_path ? createSignedAssetUrl(project.glb_storage_path).catch(() => project.glb_url || null) : Promise.resolve(project.glb_url || null),
-    project.three_mf_storage_path ? createSignedAssetUrl(project.three_mf_storage_path).catch(() => project.three_mf_url || null) : Promise.resolve(project.three_mf_url || null),
-  ]);
+  const glbLink = project.glb_storage_path ? `/api/admin/projects/${project.id}/asset?kind=glb` : null;
+  const threeMfLink = project.three_mf_storage_path ? `/api/admin/projects/${project.id}/asset?kind=3mf` : null;
 
   return (
     <main className="admin-shell project-shell">
@@ -52,10 +48,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <div className="project-card">
           <div className="project-card-head"><span>Production files</span><small>Private permanent archive</small></div>
           <div className="file-list">
-            <div><div><strong>GLB 3D model</strong><small>{project.glb_storage_path ? "Archived in Supabase Storage" : project.build_task_id || "Build not started"}</small></div>{glbLink ? <a href={glbLink} target="_blank" rel="noreferrer">Open GLB ↗</a> : <span>Not ready</span>}</div>
-            <div><div><strong>Multi-color 3MF</strong><small>{project.three_mf_storage_path ? "Archived in Supabase Storage" : project.print_task_id || "Print task not started"}</small></div>{threeMfLink ? <a href={threeMfLink} target="_blank" rel="noreferrer">Download 3MF ↗</a> : <span>Not ready</span>}</div>
+            <div><div><strong>GLB 3D model</strong><small>{project.glb_storage_path ? "Archived in Supabase Storage" : project.build_task_id || "Build not started"}</small></div>{glbLink ? <a href={glbLink}>Download GLB ↓</a> : <span>Not ready</span>}</div>
+            <div><div><strong>Multi-color 3MF</strong><small>{project.three_mf_storage_path ? "Archived in Supabase Storage" : project.print_task_id || "Print task not started"}</small></div>{threeMfLink ? <a href={threeMfLink}>Download 3MF ↓</a> : <span>Not ready</span>}</div>
           </div>
-          <p className="file-note">Когато архивът е наличен, бутоните използват временен signed URL към private Supabase Storage, а не временния Meshy asset link.</p>
+          <p className="file-note">Файловете се подават през защитен admin download endpoint. Private Supabase Storage URL не се излага директно в браузъра.</p>
         </div>
 
         <div className="project-card details-card">
