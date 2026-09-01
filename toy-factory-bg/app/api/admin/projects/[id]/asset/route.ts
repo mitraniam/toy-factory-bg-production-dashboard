@@ -32,10 +32,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const config = ASSETS[kind];
   let path = project[config.field];
 
-  // Old Meshy 3MF file URLs are short-lived and commonly return 403 after
-  // the order has aged. Do not keep presenting that broken URL as a download.
-  // The admin has an explicit regeneration action which creates a fresh 3MF
-  // and archives it permanently in Supabase Storage.
   if (!path && kind === "3mf") {
     return NextResponse.json(
       {
@@ -46,8 +42,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     );
   }
 
-  // GLB recovery is still worth attempting because an old resize/build task
-  // may return a usable model that we can immediately archive.
   if (!path) {
     try {
       path = await ensureProjectAssetArchived(project, kind);
@@ -62,16 +56,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const storageResponse = await fetchPrivateAsset(path);
-    const bytes = await storageResponse.arrayBuffer();
-    const contentType = storageResponse.headers.get("content-type") || config.contentType;
     const filename = `POPME-${project.shopify_order_name?.replace(/[^a-zA-Z0-9_-]/g, "") || project.id.slice(0, 8)}-${project.size_cm}cm.${kind}`;
+    const contentLength = storageResponse.headers.get("content-length");
 
-    return new NextResponse(bytes, {
+    return new NextResponse(storageResponse.body, {
       status: 200,
       headers: {
-        "Content-Type": contentType,
+        "Content-Type": storageResponse.headers.get("content-type") || config.contentType,
         "Content-Disposition": `attachment; filename="${filename}"`,
-        "Content-Length": String(bytes.byteLength),
+        ...(contentLength ? { "Content-Length": contentLength } : {}),
         "Cache-Control": "private, no-store, max-age=0",
       },
     });
