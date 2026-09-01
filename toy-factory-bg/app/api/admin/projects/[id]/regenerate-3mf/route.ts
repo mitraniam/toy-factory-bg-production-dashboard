@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin-auth";
+import { createTemporaryAssetUrl } from "@/lib/asset-access";
 import { createMultiColorPrint } from "@/lib/meshy";
 import { ensureProjectAssetArchived } from "@/lib/project-assets";
 import { getProject, updateProject } from "@/lib/projects";
-import { createSignedAssetUrl } from "@/lib/storage";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin();
   } catch {
@@ -24,11 +24,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   }
 
   try {
-    // Recover/archive the resized GLB first. Meshy cannot read our private
-    // bucket directly, so give the new print task a short-lived signed GLB URL.
+    // Recover/archive the resized GLB first. For normal Storage objects and for
+    // oversized chunked archives we expose the same short-lived POPME proxy URL
+    // to Meshy, so regeneration does not depend on Supabase's per-object limit.
     const glbPath = await ensureProjectAssetArchived(project, "glb");
-    const signedGlbUrl = await createSignedAssetUrl(glbPath, 60 * 60);
-    const printTaskId = await createMultiColorPrint(signedGlbUrl);
+    const inputUrl = createTemporaryAssetUrl(new URL(request.url).origin, glbPath, 60 * 60);
+    const printTaskId = await createMultiColorPrint(inputUrl);
 
     await updateProject(project.id, {
       print_task_id: printTaskId,
