@@ -27,6 +27,15 @@ export async function POST(request: NextRequest) {
   let projectId: string | null = null;
 
   try {
+    // A mock preview must never become a paid order: after payment the pipeline
+    // would send the fake prototype id to Meshy and fail. Block it on production.
+    if (process.env.NEXT_PUBLIC_MOCK_AI === "true" && process.env.VERCEL_ENV === "production") {
+      return NextResponse.json(
+        { error: "Поръчките са временно недостъпни (AI mock режим е включен на production)." },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const prototypeTaskId = String(body?.prototypeTaskId || "");
     const size = body?.size;
