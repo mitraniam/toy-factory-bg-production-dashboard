@@ -377,7 +377,12 @@ export default function ToyBuilder({ initialView = "upload" }: { initialView?: "
           </div>
           <label className="pmv2-consent">
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
-            <span>Имам право да използвам тази снимка за създаване на персонализирана фигурка.</span>
+            <span>
+              Имам право да използвам тази снимка (ако на нея има дете, аз съм негов родител или настойник) и съм
+              съгласен/на тя да бъде обработена за създаване на фигурката съгласно{" "}
+              <a href="/privacy" target="_blank" rel="noreferrer">Политиката за поверителност</a> и{" "}
+              <a href="/terms" target="_blank" rel="noreferrer">Общите условия</a>.
+            </span>
           </label>
         </div>
 

@@ -1,3 +1,5 @@
+import { LEGAL_LINKS, MERCHANT } from "@/lib/legal";
+
 const styles = [
   {
     name: "POP",
@@ -15,7 +17,7 @@ const styles = [
     copy: "По-мек chibi силует, повече детайл и много характер.",
     image: "/marketing/mini.svg",
     tone: "blue",
-    badge: "НАЙ-ПОПУЛЯРЕН",
+    badge: "ДЕТАЙЛЕН",
   },
   {
     name: "BRICK",
@@ -33,6 +35,18 @@ const faqs = [
   ["Каква снимка да кача?", "Най-добре работи ясна снимка с добро осветление, видимо лице и по възможност цял ръст."],
   ["Какви размери има?", "10 cm, 15 cm или 20 cm. Избираш размера след визуализацията."],
   ["Мога ли да генерирам отново?", "Да. Имаш до два допълнителни опита за същата снимка."],
+  [
+    "Колко време отнема?",
+    `Изработка ${MERCHANT.productionDays} работни дни след плащане, плюс ${MERCHANT.deliveryDays} работни дни доставка с ${MERCHANT.courier}. Получаваш имейл с номер за проследяване, когато фигурката тръгне към теб.`,
+  ],
+  [
+    "Мога ли да върна фигурката?",
+    "Фигурката се изработва специално по твоята снимка, затова 14-дневното право на отказ за онлайн покупки не се прилага (чл. 57, т. 3 ЗЗП). Точно затова плащаш едва след като одобриш визуализацията. Ако пристигне повредена или с дефект, пиши ни до 14 дни — изработваме нова или връщаме сумата.",
+  ],
+  [
+    "Какво става със снимката ми?",
+    "Използва се само за твоята фигурка — не за реклама и не за обучение на AI. Файловете по неплатени поръчки се трият след 7 дни, по платени — 90 дни след изпращането. Подробно в Политиката за поверителност.",
+  ],
 ];
 
 export default function Home() {
@@ -58,7 +72,7 @@ export default function Home() {
 
       <section className="pmv2-hero">
         <div className="pmv2-hero-copy">
-          <div className="pmv2-rating-line"><span>★★★★★</span><b>3</b> стила · <b>3</b> размера · preview <b>преди</b> плащане</div>
+          <div className="pmv2-rating-line"><b>3</b> стила · <b>3</b> размера · preview <b>преди</b> плащане</div>
           <h1>Една снимка.<br /><span>Твоята фигурка.</span></h1>
           <p className="pmv2-hero-lead">Превръщаме твоя снимка в персонализирана POP, MINI или BRICK 3D колекционерска фигурка.</p>
           <div className="pmv2-hero-actions">
@@ -67,7 +81,7 @@ export default function Home() {
           </div>
           <div className="pmv2-micro-trust">
             <span>◷ Плащаш след одобрение</span>
-            <span>◇ Сигурен Shopify checkout</span>
+            <span>◇ Сигурно онлайн плащане</span>
           </div>
         </div>
 
@@ -92,9 +106,9 @@ export default function Home() {
 
       <section className="pmv2-trust-marquee" aria-label="Основни предимства">
         <span>PREVIEW ПРЕДИ ПЛАЩАНЕ</span>
-        <span>SHOPIFY CHECKOUT</span>
         <span>3D ПЕЧАТ ПО ПОРЪЧКА</span>
         <span>ДО 2 НОВИ ОПИТА</span>
+        <span>ИЗРАБОТКА {MERCHANT.productionDays} РАБОТНИ ДНИ</span>
       </section>
 
       <section className="pmv2-styles" id="styles">
@@ -126,7 +140,7 @@ export default function Home() {
         <div className="pmv2-how-list">
           <div><b>01</b><strong>Качи снимка</strong><span>JPG, PNG или WEBP · до 8 MB</span></div>
           <div><b>02</b><strong>Виж визуализация</strong><span>До 2 нови опита</span></div>
-          <div><b>03</b><strong>Одобри и поръчай</strong><span>10 / 15 / 20 cm · Shopify checkout</span></div>
+          <div><b>03</b><strong>Одобри и поръчай</strong><span>10 / 15 / 20 cm · сигурно онлайн плащане</span></div>
         </div>
       </section>
 
@@ -165,8 +179,19 @@ export default function Home() {
 
       <footer className="pmv2-footer">
         <a className="pmv2-logo" href="#top">popme<span>✦</span></a>
-        <p>Персонализирани 3D колекционерски фигурки · Made of you.</p>
-        <small>© 2026 POPME</small>
+        <div className="pmv2-footer-legal">
+          <p>Персонализирани 3D колекционерски фигурки · Made of you.</p>
+          <nav aria-label="Правна информация">
+            {LEGAL_LINKS.map((link) => (
+              <a key={link.href} href={link.href}>{link.label}</a>
+            ))}
+            <a href={`mailto:${MERCHANT.email}`}>Контакт</a>
+          </nav>
+          <address>
+            {MERCHANT.legalName} · ЕИК {MERCHANT.eik} · {MERCHANT.address} · {MERCHANT.email}
+          </address>
+        </div>
+        <small>© 2026 {MERCHANT.brand}</small>
       </footer>
 
       <a className="pmv2-mobile-cta" href="/create"><span>СЪЗДАЙ ФИГУРКА</span><strong>от €49 →</strong></a>
