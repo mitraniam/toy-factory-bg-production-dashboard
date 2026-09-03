@@ -38,9 +38,12 @@ async function archiveExactSizeThreeMf(project: ToyProject, sourceUrl: string) {
 
   console.info("3MF exact-size postprocess", {
     projectId: project.id,
+    objectPath: resized.objectPath,
+    objectCount: resized.objectCount,
     currentHeightMm: resized.currentHeightMm,
     targetHeightMm: resized.targetHeightMm,
     scale: resized.scale,
+    meshyResizeWasAccurate: resized.alreadyCorrect,
     vertexCount: resized.vertexCount,
   });
 

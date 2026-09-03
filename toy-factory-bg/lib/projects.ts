@@ -155,6 +155,13 @@ export async function getProject(id: string) {
   return rows?.[0] || null;
 }
 
+export async function listProjectsByOrderId(orderId: string) {
+  const params = new URLSearchParams();
+  params.set("select", "*");
+  params.set("shopify_order_id", `eq.${orderId}`);
+  return (await supabaseRest(`toy_projects?${params.toString()}`, { method: "GET" })) as ToyProject[];
+}
+
 export async function findProjectByTaskId(taskId: string) {
   const params = new URLSearchParams();
   params.set("select", "*");

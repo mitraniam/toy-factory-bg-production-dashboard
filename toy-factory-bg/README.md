@@ -213,6 +213,15 @@ SHOPIFY_WEBHOOK_SECRET=...
 
 The code verifies `X-Shopify-Hmac-SHA256` using the raw request body before trusting the order payload.
 
+12. Create two more webhooks with the same signing secret, both pointing to:
+
+```text
+https://YOUR-PROJECT.vercel.app/api/shopify/webhooks/orders-cancelled
+```
+
+- Event **Order cancellation** (`orders/cancelled`) — a project that has not started printing is set to `CANCELLED`; a project already in production is flagged in the dashboard for a manual decision.
+- Event **Refund create** (`refunds/create`) — never auto-cancels, only flags the project so the operator checks the order before continuing.
+
 ## STEP 9 — Test the webhook endpoint itself
 
 In Shopify Settings → Notifications → Webhooks:

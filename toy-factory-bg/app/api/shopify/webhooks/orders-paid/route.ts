@@ -1,7 +1,12 @@
-import crypto from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { syncProject } from "@/lib/production";
 import { claimProjectForPaidOrder, updateProject } from "@/lib/projects";
+import {
+  readShopifyWebhookHeaders,
+  shopifyOrderGid,
+  shopifyShopDomainMatches,
+  verifyShopifyWebhook,
+} from "@/lib/shopify-webhook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -21,33 +26,6 @@ type ShopifyPaidOrder = {
   line_items?: ShopifyLineItem[];
 };
 
-function verifyWebhook(rawBody: string, providedHmac: string | null) {
-  const secret = process.env.SHOPIFY_WEBHOOK_SECRET || process.env.SHOPIFY_APP_CLIENT_SECRET;
-  if (!secret || !providedHmac) return false;
-
-  const computed = crypto
-    .createHmac("sha256", secret)
-    .update(rawBody, "utf8")
-    .digest("base64");
-
-  const providedBuffer = Buffer.from(providedHmac, "utf8");
-  const computedBuffer = Buffer.from(computed, "utf8");
-  if (providedBuffer.length !== computedBuffer.length) return false;
-  return crypto.timingSafeEqual(providedBuffer, computedBuffer);
-}
-
-function normalizeShopDomain(value: string) {
-  return value.replace(/^https?:\/\//, "").replace(/\/$/, "").split("/")[0].toLowerCase();
-}
-
-function shopDomainMatches(provided: string | null) {
-  const expected = process.env.SHOPIFY_STORE_DOMAIN;
-  // If the store domain is not configured we cannot verify it; HMAC still protects us.
-  if (!expected) return true;
-  if (!provided) return false;
-  return normalizeShopDomain(provided) === normalizeShopDomain(expected);
-}
-
 const PAID_FINANCIAL_STATUSES = new Set(["paid", "partially_refunded"]);
 
 /** Project IDs with the total ordered quantity per project. */
@@ -66,13 +44,10 @@ function projectQuantitiesFromOrder(order: ShopifyPaidOrder) {
 
 export async function POST(request: NextRequest) {
   const rawBody = await request.text();
-  const hmac = request.headers.get("x-shopify-hmac-sha256");
-  const topic = request.headers.get("x-shopify-topic");
-  const webhookId = request.headers.get("x-shopify-webhook-id");
-  const shopDomain = request.headers.get("x-shopify-shop-domain");
+  const { hmac, topic, webhookId, shopDomain } = readShopifyWebhookHeaders(request);
 
-  if (!verifyWebhook(rawBody, hmac)) return new NextResponse("Invalid webhook signature", { status: 401 });
-  if (!shopDomainMatches(shopDomain)) return new NextResponse("Unknown shop domain", { status: 401 });
+  if (!verifyShopifyWebhook(rawBody, hmac)) return new NextResponse("Invalid webhook signature", { status: 401 });
+  if (!shopifyShopDomainMatches(shopDomain)) return new NextResponse("Unknown shop domain", { status: 401 });
   if (topic && topic !== "orders/paid") return new NextResponse("Ignored topic", { status: 200 });
 
   let order: ShopifyPaidOrder;
@@ -95,7 +70,7 @@ export async function POST(request: NextRequest) {
   const projectIds = [...projectQuantities.keys()];
   if (!projectIds.length) return new NextResponse("No toy projects", { status: 200 });
 
-  const orderId = order.admin_graphql_api_id || (order.id ? `gid://shopify/Order/${String(order.id)}` : null);
+  const orderId = shopifyOrderGid(order);
   if (!orderId) return new NextResponse("Missing order id", { status: 400 });
 
   const failures: string[] = [];
