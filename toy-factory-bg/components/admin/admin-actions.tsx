@@ -49,17 +49,22 @@ export function ProjectActions({
   status,
   notes,
   trackingNumber,
+  trackingCompany,
+  fulfillmentId,
   canRegenerateThreeMf = false,
 }: {
   projectId: string;
   status: ProjectStatus;
   notes?: string | null;
   trackingNumber?: string | null;
+  trackingCompany?: string | null;
+  fulfillmentId?: string | null;
   canRegenerateThreeMf?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<ProjectStatus>(
     MANUAL_PRODUCTION_STATUSES.includes(status) ? status : "READY_FOR_PRINT"
   );
@@ -81,13 +86,19 @@ export function ProjectActions({
     event.preventDefault();
     setBusy("save");
     setError("");
+    setNotice("");
     const form = new FormData(event.currentTarget);
     try {
-      await postJson(`/api/admin/projects/${projectId}/status`, {
+      const data = await postJson(`/api/admin/projects/${projectId}/status`, {
         status: selectedStatus,
         productionNotes: String(form.get("productionNotes") || ""),
         trackingNumber: String(form.get("trackingNumber") || ""),
+        trackingCompany: String(form.get("trackingCompany") || ""),
       });
+      if (data?.fulfillment?.note) {
+        if (data.fulfillment.created) setNotice(data.fulfillment.note);
+        else setError(data.fulfillment.note);
+      }
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Save failed");
@@ -129,7 +140,11 @@ export function ProjectActions({
         </label>
         <label>
           Tracking number
-          <input name="trackingNumber" defaultValue={trackingNumber || ""} placeholder="Optional" />
+          <input name="trackingNumber" defaultValue={trackingNumber || ""} placeholder="Задължителен при SHIPPED" />
+        </label>
+        <label>
+          Куриер
+          <input name="trackingCompany" defaultValue={trackingCompany || ""} placeholder="Econt / Speedy" />
         </label>
         <label className="full-span">
           Production notes
@@ -139,6 +154,8 @@ export function ProjectActions({
           {busy === "save" ? "Saving…" : "Save production update"}
         </button>
       </form>
+      {fulfillmentId && <p className="file-note">Shopify fulfillment: {fulfillmentId} — клиентът е уведомен с tracking.</p>}
+      {notice && <p className="file-note">{notice}</p>}
       {error && <div className="admin-error-box">{error}</div>}
     </div>
   );

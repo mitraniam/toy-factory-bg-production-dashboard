@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { syncActiveProjects } from "@/lib/production";
+import { runWatchdog } from "@/lib/watchdog";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -10,7 +11,11 @@ export async function GET(request: Request) {
   if (!expected || auth !== `Bearer ${expected}`) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     const results = await syncActiveProjects(50);
-    return NextResponse.json({ ok: true, count: results.length, results });
+    const alerts = await runWatchdog().catch((error) => {
+      console.error("watchdog failed", error);
+      return [];
+    });
+    return NextResponse.json({ ok: true, count: results.length, results, alerts });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Cron sync failed" }, { status: 500 });
   }

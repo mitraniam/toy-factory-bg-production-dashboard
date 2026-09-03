@@ -82,6 +82,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             status={project.status}
             notes={project.production_notes}
             trackingNumber={project.tracking_number}
+            trackingCompany={project.tracking_company}
+            fulfillmentId={project.shopify_fulfillment_id}
             canRegenerateThreeMf={canRegenerateThreeMf}
           />
         </div>

@@ -352,3 +352,32 @@ Physical production:
 ## Important MVP limitation
 
 Meshy output links can be time-limited. The dashboard can refresh them by querying the Meshy task again, but the next production hardening step should copy final GLB/3MF files into our own private object storage (for example Supabase Storage or R2) so every production file is archived permanently.
+
+## STEP 13 — Shipping notifications + operator alerts (Phase 2)
+
+### 13.1 Run the migration
+
+In Supabase SQL editor run `supabase/20260903-alerts-fulfillment.sql` (adds
+`alert_sent_at`, `shopify_fulfillment_id`, `tracking_company`).
+
+### 13.2 Shopify Admin API token (customer tracking email)
+
+1. Shopify Admin → Settings → Apps and sales channels → Develop apps → Create an app (e.g. `POPME production`).
+2. Configure Admin API scopes: `read_orders`, `write_fulfillments` (also `read_fulfillments`, `read_merchant_managed_fulfillment_orders`, `write_merchant_managed_fulfillment_orders`).
+3. Install the app and copy the Admin API access token (`shpat_…`) into Vercel as `SHOPIFY_ADMIN_ACCESS_TOKEN`.
+4. Redeploy.
+
+From then on, saving a project as **Shipped** with a tracking number (and optionally a courier name) creates the fulfillment in Shopify and Shopify emails the customer the tracking link. The fulfillment id is stored on the project; the dashboard shows the outcome under the form. If the token is missing, the status still saves and the dashboard tells you to mark the order in Shopify by hand.
+
+### 13.3 Alerts (Resend)
+
+1. In Resend create an API key and, ideally, verify your sending domain.
+2. In Vercel set `RESEND_API_KEY`, `ALERT_EMAIL_TO`, `ALERT_EMAIL_FROM` (see `.env.example`).
+3. Redeploy.
+
+The watchdog runs after every cron sync and after the dashboard's "Sync Meshy now". It emails you once per problem when:
+
+- a project has any `last_error` (3D failed, 3MF failed, quantity mismatch, cancellation during production, refund, Shopify fulfillment error);
+- a project sits in an automated stage (`3D generating`, `Sizing model`, `Preparing 3MF`, …) longer than `WATCHDOG_STALE_MINUTES` (default 120).
+
+An alert is sent once and stamped in `alert_sent_at`; clearing the error (Retry, saving a manual status) re-arms it.

@@ -71,6 +71,9 @@ export type ToyProject = {
   three_mf_storage_path?: string | null;
   production_notes?: string | null;
   tracking_number?: string | null;
+  tracking_company?: string | null;
+  shopify_fulfillment_id?: string | null;
+  alert_sent_at?: string | null;
   last_error?: string | null;
 };
 
@@ -116,10 +119,12 @@ export async function createProject(project: ToyProject) {
 }
 
 export async function updateProject(id: string, patch: Partial<ToyProject>) {
+  // Clearing the error re-arms the watchdog so the next failure alerts again.
+  const rearm = patch.last_error === null && patch.alert_sent_at === undefined ? { alert_sent_at: null } : {};
   const rows = (await supabaseRest(`toy_projects?id=eq.${encodeURIComponent(id)}`, {
     method: "PATCH",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
+    body: JSON.stringify({ ...patch, ...rearm, updated_at: new Date().toISOString() }),
   })) as ToyProject[];
   return rows?.[0] || null;
 }
@@ -153,6 +158,20 @@ export async function getProject(id: string) {
     method: "GET",
   })) as ToyProject[];
   return rows?.[0] || null;
+}
+
+/** Projects with an un-alerted error, or stuck in an automated stage past `staleBefore`. */
+export async function listProjectsNeedingAlert(input: { staleStatuses: ProjectStatus[]; staleBefore: string }) {
+  const params = new URLSearchParams();
+  params.set("select", "*");
+  params.set("alert_sent_at", "is.null");
+  params.set(
+    "or",
+    `(last_error.not.is.null,and(status.in.(${input.staleStatuses.join(",")}),updated_at.lt.${input.staleBefore}))`
+  );
+  params.set("order", "updated_at.asc");
+  params.set("limit", "50");
+  return (await supabaseRest(`toy_projects?${params.toString()}`, { method: "GET" })) as ToyProject[];
 }
 
 export async function listProjectsByOrderId(orderId: string) {
