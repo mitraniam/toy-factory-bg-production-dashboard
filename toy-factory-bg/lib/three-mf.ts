@@ -4,17 +4,28 @@ import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
  * Post-processes a Meshy multi-color 3MF so the printed figure is exactly the
  * ordered height. 3MF uses Z-up millimetres, so height = Z extent.
  *
- * The scaling is a plain vertex rewrite, which is only correct when the whole
- * geometry lives in ONE model part with NO placement transforms. Anything else
- * (several model parts, <components>, or a non-identity <item transform>)
- * would be scaled partially or not at all, producing a wrong-sized or
- * deformed print. Those files are rejected with an explicit error so the
- * operator scales them manually in the slicer instead of trusting the output.
+ * Meshy emits Bambu Studio's project layout:
+ *   3D/3dmodel.model            root: one <object> made of <components>, each
+ *                               pointing at a geometry part, plus a <build> item
+ *   3D/Objects/object_N.model   geometry parts (vertices + triangles with the
+ *                               per-triangle `paint_color` filament data)
+ *   Metadata/model_settings.config, Metadata/project_settings.config
+ *                               Bambu extruder / filament assignments
+ *
+ * Scaling rewrites vertex coordinates in every geometry part with ONE global
+ * scale about ONE global anchor, so multiple parts keep their relative
+ * placement. Triangles, paint_color attributes and all metadata are untouched,
+ * which is what keeps the colors intact in Bambu Studio.
+ *
+ * Only translations are accepted in component/build transforms. A rotation or
+ * scale there would make a plain vertex rewrite wrong, so such files are
+ * rejected with an explicit error and the operator scales them in the slicer.
  */
 
-const MODEL_PART_PATTERN = /^3D\/.*\.model$/i;
-const IDENTITY_TRANSFORM = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0];
+const ROOT_MODEL = "3D/3dmodel.model";
+const GEOMETRY_PART_PATTERN = /^3D\/Objects\/[^/]+\.model$/i;
 const TRANSFORM_EPSILON = 1e-6;
+const VERTEX_PATTERN = /<vertex\s+x="([^"]+)"\s+y="([^"]+)"\s+z="([^"]+)"\s*\/>/g;
 
 /** Files already within this relative tolerance of the target are still rewritten, but logged as a no-op. */
 export const HEIGHT_TOLERANCE = 0.02;
@@ -28,111 +39,189 @@ export class ThreeMfUnsupportedError extends Error {
   }
 }
 
+type Vec3 = [number, number, number];
+type Bounds = { min: Vec3; max: Vec3; count: number };
+
 function parseNumber(value: string) {
   const number = Number(value);
-  if (!Number.isFinite(number)) throw new Error(`Invalid 3MF coordinate '${value}'.`);
+  if (!Number.isFinite(number)) throw new Error(`Invalid 3MF number '${value}'.`);
   return number;
 }
 
-function findModelPart(archive: Record<string, Uint8Array>) {
-  const parts = Object.keys(archive).filter((name) => MODEL_PART_PATTERN.test(name));
-  if (parts.length === 0) throw new Error("3MF contains no 3D/*.model part.");
-  if (parts.length > 1) {
-    throw new ThreeMfUnsupportedError(`archive has ${parts.length} model parts (${parts.join(", ")})`);
+/** 3MF transform = 12 numbers: 3x3 matrix (row-major, first 9) + translation (last 3). Returns translation if the 3x3 is identity. */
+function translationOf(transform: string | undefined, where: string): Vec3 {
+  if (!transform) return [0, 0, 0];
+  const n = transform.trim().split(/\s+/).map(Number);
+  if (n.length !== 12 || n.some((v) => !Number.isFinite(v))) {
+    throw new ThreeMfUnsupportedError(`${where} has an unreadable transform "${transform}"`);
   }
-  return parts[0];
-}
-
-function isIdentityTransform(value: string) {
-  const numbers = value.trim().split(/\s+/).map(Number);
-  if (numbers.length !== 12 || numbers.some((n) => !Number.isFinite(n))) return false;
-  return numbers.every((n, i) => Math.abs(n - IDENTITY_TRANSFORM[i]) < TRANSFORM_EPSILON);
-}
-
-function assertPlainGeometry(xml: string) {
-  if (/<components?\b/i.test(xml)) {
-    throw new ThreeMfUnsupportedError("model uses <components> (assembled objects)");
-  }
-
-  const transformPattern = /<(item|component)\b[^>]*\btransform="([^"]*)"/gi;
-  let match: RegExpExecArray | null;
-  while ((match = transformPattern.exec(xml))) {
-    if (!isIdentityTransform(match[2])) {
-      throw new ThreeMfUnsupportedError(`<${match[1]}> has a non-identity transform "${match[2]}"`);
+  const identity = [1, 0, 0, 0, 1, 0, 0, 0, 1];
+  for (let i = 0; i < 9; i++) {
+    if (Math.abs(n[i] - identity[i]) > TRANSFORM_EPSILON) {
+      throw new ThreeMfUnsupportedError(`${where} has a rotation/scale transform "${transform}"`);
     }
   }
-
-  const objectCount = (xml.match(/<object\b/gi) || []).length;
-  const meshCount = (xml.match(/<mesh\b/gi) || []).length;
-  if (objectCount === 0 || meshCount === 0) throw new Error("3MF model part has no mesh geometry.");
-  return { objectCount, meshCount };
+  return [n[9], n[10], n[11]];
 }
 
-export function resizeThreeMfToHeight(input: Uint8Array, targetHeightMm: number) {
+function normalizePartPath(path: string) {
+  return path.replace(/^\//, "");
+}
+
+/** Geometry parts referenced from the root model, with their accumulated translation. */
+function resolveParts(archive: Record<string, Uint8Array>) {
+  const rootBytes = archive[ROOT_MODEL];
+  if (!rootBytes) throw new Error(`3MF has no ${ROOT_MODEL}.`);
+  const root = strFromU8(rootBytes);
+
+  // Build items: which root objects are placed on the plate, and where.
+  const items = [...root.matchAll(/<item\b([^>]*)\/>/gi)].map((m) => m[1]);
+  if (items.length === 0) throw new Error("3MF root has no <build> items.");
+  if (items.length > 1) throw new ThreeMfUnsupportedError(`root has ${items.length} build items`);
+  const itemObjectId = /\bobjectid="([^"]+)"/.exec(items[0])?.[1];
+  const itemTranslation = translationOf(/\btransform="([^"]*)"/.exec(items[0])?.[1], "<item>");
+
+  // The root object either embeds a mesh directly or is assembled from components.
+  const objectMatch = new RegExp(`<object\\b[^>]*\\bid="${itemObjectId}"[^>]*>([\\s\\S]*?)</object>`, "i").exec(root);
+  if (!objectMatch) throw new Error(`3MF root object ${itemObjectId} not found.`);
+  const objectBody = objectMatch[1];
+
+  const parts: { path: string; translation: Vec3 }[] = [];
+  if (/<mesh\b/i.test(objectBody)) {
+    parts.push({ path: ROOT_MODEL, translation: itemTranslation });
+  }
+  for (const c of objectBody.matchAll(/<component\b([^>]*)\/>/gi)) {
+    const path = /\bp:path="([^"]+)"/.exec(c[1])?.[1];
+    if (!path) throw new ThreeMfUnsupportedError("component without p:path (in-file component references)");
+    const t = translationOf(/\btransform="([^"]*)"/.exec(c[1])?.[1], "<component>");
+    parts.push({
+      path: normalizePartPath(path),
+      translation: [t[0] + itemTranslation[0], t[1] + itemTranslation[1], t[2] + itemTranslation[2]],
+    });
+  }
+  if (parts.length === 0) throw new Error("3MF root object has neither a mesh nor components.");
+
+  for (const part of parts) {
+    if (!archive[part.path]) throw new Error(`3MF references missing part ${part.path}.`);
+    if (part.path !== ROOT_MODEL && !GEOMETRY_PART_PATTERN.test(part.path)) {
+      throw new ThreeMfUnsupportedError(`unexpected part location ${part.path}`);
+    }
+    const xml = strFromU8(archive[part.path]);
+    if (part.path !== ROOT_MODEL && /<components?\b/i.test(xml)) {
+      throw new ThreeMfUnsupportedError(`${part.path} contains nested components`);
+    }
+  }
+  return parts;
+}
+
+function measure(xml: string, translation: Vec3, into: Bounds) {
+  VERTEX_PATTERN.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = VERTEX_PATTERN.exec(xml))) {
+    const x = parseNumber(match[1]) + translation[0];
+    const y = parseNumber(match[2]) + translation[1];
+    const z = parseNumber(match[3]) + translation[2];
+    if (x < into.min[0]) into.min[0] = x;
+    if (x > into.max[0]) into.max[0] = x;
+    if (y < into.min[1]) into.min[1] = y;
+    if (y > into.max[1]) into.max[1] = y;
+    if (z < into.min[2]) into.min[2] = z;
+    if (z > into.max[2]) into.max[2] = z;
+    into.count += 1;
+  }
+}
+
+/** Filament palette (hex) from Bambu project settings, if present. */
+export function readFilamentPalette(archive: Record<string, Uint8Array>): string[] {
+  const bytes = archive["Metadata/project_settings.config"];
+  if (!bytes) return [];
+  try {
+    const json = JSON.parse(strFromU8(bytes)) as { filament_colour?: unknown };
+    if (!Array.isArray(json.filament_colour)) return [];
+    return json.filament_colour
+      .filter((c): c is string => typeof c === "string")
+      .map((c) => (c.length === 9 && c.startsWith("#") ? c.slice(0, 7) : c).toUpperCase());
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Optionally retargets the Bambu filament presets to the operator's printer
+ * (e.g. "@BBL A1" instead of Meshy's default "@BBL X1C"). When Bambu Studio
+ * opens a project whose filament presets do not match the active printer it
+ * resets every slot to the default filament — which shows the whole model in
+ * one color. Set BAMBU_FILAMENT_PROFILE_SUFFIX to avoid that.
+ */
+function retargetFilamentPresets(archive: Record<string, Uint8Array>, suffix: string | undefined) {
+  if (!suffix) return false;
+  const bytes = archive["Metadata/project_settings.config"];
+  if (!bytes) return false;
+  const text = strFromU8(bytes);
+  const updated = text.replace(/@BBL [A-Z0-9 ]+"/g, `${suffix.trim()}"`);
+  if (updated === text) return false;
+  archive["Metadata/project_settings.config"] = strToU8(updated);
+  return true;
+}
+
+export function resizeThreeMfToHeight(
+  input: Uint8Array,
+  targetHeightMm: number,
+  options: { filamentProfileSuffix?: string } = {}
+) {
   if (!Number.isFinite(targetHeightMm) || targetHeightMm <= 0) {
     throw new Error("Invalid 3MF target height.");
   }
 
   const archive = unzipSync(input);
-  const objectPath = findModelPart(archive);
-  const xml = strFromU8(archive[objectPath]);
-  const { objectCount, meshCount } = assertPlainGeometry(xml);
+  const parts = resolveParts(archive);
 
-  const vertexPattern = /<vertex\s+x="([^"]+)"\s+y="([^"]+)"\s+z="([^"]+)"\s*\/>/g;
-
-  let match: RegExpExecArray | null;
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  let minZ = Infinity;
-  let maxZ = -Infinity;
-  let count = 0;
-
-  while ((match = vertexPattern.exec(xml))) {
-    const x = parseNumber(match[1]);
-    const y = parseNumber(match[2]);
-    const z = parseNumber(match[3]);
-    minX = Math.min(minX, x); maxX = Math.max(maxX, x);
-    minY = Math.min(minY, y); maxY = Math.max(maxY, y);
-    minZ = Math.min(minZ, z); maxZ = Math.max(maxZ, z);
-    count += 1;
+  const bounds: Bounds = { min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity], count: 0 };
+  const xmlByPath = new Map<string, string>();
+  for (const part of parts) {
+    const xml = strFromU8(archive[part.path]);
+    xmlByPath.set(part.path, xml);
+    measure(xml, part.translation, bounds);
   }
-
-  if (!count || !Number.isFinite(minZ) || !Number.isFinite(maxZ)) {
+  if (!bounds.count || !Number.isFinite(bounds.min[2]) || !Number.isFinite(bounds.max[2])) {
     throw new Error("Could not read vertices from 3MF geometry.");
   }
 
-  const currentHeightMm = maxZ - minZ;
+  const currentHeightMm = bounds.max[2] - bounds.min[2];
   if (!(currentHeightMm > 0)) throw new Error("3MF geometry has zero height.");
 
   const scale = targetHeightMm / currentHeightMm;
   const alreadyCorrect = Math.abs(scale - 1) <= HEIGHT_TOLERANCE;
-  const centerX = (minX + maxX) / 2;
-  const centerY = (minY + maxY) / 2;
+  // Anchor: XY centre, bottom Z — the figure grows in place and stays on the plate.
+  const anchor: Vec3 = [(bounds.min[0] + bounds.max[0]) / 2, (bounds.min[1] + bounds.max[1]) / 2, bounds.min[2]];
 
-  const resizedXml = xml.replace(vertexPattern, (_whole, xs: string, ys: string, zs: string) => {
-    const x = parseNumber(xs);
-    const y = parseNumber(ys);
-    const z = parseNumber(zs);
-    const nx = centerX + (x - centerX) * scale;
-    const ny = centerY + (y - centerY) * scale;
-    const nz = minZ + (z - minZ) * scale;
-    return `<vertex x="${nx.toFixed(6)}" y="${ny.toFixed(6)}" z="${nz.toFixed(6)}"/>`;
-  });
+  for (const part of parts) {
+    const xml = xmlByPath.get(part.path)!;
+    const [tx, ty, tz] = part.translation;
+    // Global position g = local + t; scaled g' = anchor + (g - anchor) * s; local' = g' - t.
+    const resized = xml.replace(VERTEX_PATTERN, (_whole, xs: string, ys: string, zs: string) => {
+      const nx = anchor[0] + (parseNumber(xs) + tx - anchor[0]) * scale - tx;
+      const ny = anchor[1] + (parseNumber(ys) + ty - anchor[1]) * scale - ty;
+      const nz = anchor[2] + (parseNumber(zs) + tz - anchor[2]) * scale - tz;
+      return `<vertex x="${nx.toFixed(4)}" y="${ny.toFixed(4)}" z="${nz.toFixed(4)}"/>`;
+    });
+    archive[part.path] = strToU8(resized);
+  }
+  xmlByPath.clear();
 
-  archive[objectPath] = strToU8(resizedXml);
+  const retargeted = retargetFilamentPresets(archive, options.filamentProfileSuffix);
+  const palette = readFilamentPalette(archive);
   const output = zipSync(archive, { level: 6 });
 
   return {
     bytes: output,
-    objectPath,
-    objectCount,
-    meshCount,
+    parts: parts.map((p) => p.path),
     currentHeightMm,
     targetHeightMm,
     scale,
     alreadyCorrect,
-    vertexCount: count,
+    vertexCount: bounds.count,
+    palette,
+    retargeted,
   };
 }

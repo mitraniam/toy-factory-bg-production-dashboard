@@ -9,6 +9,8 @@ import {
 } from "@/lib/shopify-webhook";
 
 export const runtime = "nodejs";
+// 3MF post-processing of a ~100 MB Meshy file takes ~10-20 s.
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 type ShopifyProperty = { name?: string; value?: string };

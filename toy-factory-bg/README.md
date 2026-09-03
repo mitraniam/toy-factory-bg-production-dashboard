@@ -381,3 +381,25 @@ The watchdog runs after every cron sync and after the dashboard's "Sync Meshy no
 - a project sits in an automated stage (`3D generating`, `Sizing model`, `Preparing 3MF`, …) longer than `WATCHDOG_STALE_MINUTES` (default 120).
 
 An alert is sent once and stamped in `alert_sent_at`; clearing the error (Retry, saving a manual status) re-arms it.
+
+## STEP 14 — Opening the 3MF in Bambu Studio (colours)
+
+Run `supabase/20260903-print-palette.sql` once (adds `print_palette`).
+
+The archived 3MF is a Bambu Studio project: geometry with per-triangle filament
+painting plus 8 filament slots with their colours. Always open it with
+**File → Open Project** (not Import / drag-and-drop as geometry).
+
+If the whole model shows in one colour (Bambu's default green), Bambu Studio has
+replaced the file's filament presets because they were written for a different
+printer model. Two fixes:
+
+1. Set `BAMBU_FILAMENT_PROFILE_SUFFIX` in Vercel to your printer (e.g. `@BBL A1`)
+   and regenerate/retry the 3MF — new files then open with the right presets.
+2. For an existing file: in Bambu Studio's filament list set the 8 slot colours
+   to the palette shown on the project page in the dashboard (slot 1 → colour 1, …).
+
+Note: Meshy's raw 3MF is ~100 MB; post-processing needs up to ~1 GB RAM and
+10–20 s. Vercel functions on the Pro plan (1.7 GB default) handle it; on Hobby
+(1 GB) it may run out of memory — the project then lands in `PRINT_FILE_FAILED`
+with the raw Meshy 3MF link still available for manual scaling.

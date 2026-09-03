@@ -203,3 +203,11 @@ footer { max-width: 1280px; margin: 0 auto; padding: 42px 28px; display: flex; j
 @media (max-width: 560px) {
   .admin-login-card { padding: 24px; }.admin-stats-grid { grid-template-columns: 1fr 1fr; gap: 8px; }.admin-stats-grid > div { padding: 14px; }.admin-stats-grid strong { font-size: 25px; }.admin-filters { grid-template-columns: 1fr; }.production-form { grid-template-columns: 1fr; }.production-form .full-span { grid-column: auto; }.preview-card img { height: 330px; }
 }
+.palette { margin-top: 14px; border-top: 1px solid #eceef0; padding-top: 12px; }
+.palette-head strong { display: block; font-size: 11px; font-weight: 850; }
+.palette-head small { display: block; color: #8a9098; font-size: 10px; line-height: 1.5; margin: 3px 0 9px; }
+.palette-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 7px; }
+.palette-list li { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.palette-swatch { width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); flex: none; }
+.palette-list b { width: 14px; text-align: right; }
+.palette-list code { font-size: 10px; color: #5c636b; }

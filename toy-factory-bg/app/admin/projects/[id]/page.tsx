@@ -57,6 +57,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             <div><div><strong>Multi-color 3MF</strong><small>{hasArchivedThreeMf ? "Archived in Supabase Storage" : project.status === "PRINT_FILE_GENERATING" ? "Regenerating in Meshy…" : "Legacy file not archived"}</small></div>{threeMfLink ? <a href={threeMfLink}>Download 3MF ↓</a> : project.status === "PRINT_FILE_GENERATING" ? <span>Generating…</span> : <span>Regenerate required</span>}</div>
           </div>
           <p className="file-note">Старите Meshy 3MF линкове могат да изтекат и да върнат 403. Ако няма архивиран 3MF, използвай Regenerate expired 3MF в Production control.</p>
+          {project.print_palette?.length ? (
+            <div className="palette">
+              <div className="palette-head"><strong>AMS филаменти (слот → цвят)</strong><small>Отвори 3MF с File → Open Project. Ако Bambu Studio смени филаментите с default, върни тези цветове по слотове.</small></div>
+              <ol className="palette-list">
+                {project.print_palette.map((hex, index) => (
+                  <li key={`${hex}-${index}`}><span className="palette-swatch" style={{ background: hex }} /><b>{index + 1}</b><code>{hex}</code></li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
         </div>
 
         <div className="project-card details-card">

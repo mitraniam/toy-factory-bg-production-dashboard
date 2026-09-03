@@ -74,6 +74,8 @@ export type ToyProject = {
   tracking_company?: string | null;
   shopify_fulfillment_id?: string | null;
   alert_sent_at?: string | null;
+  /** Bambu filament palette (hex) extracted from the print 3MF, slot 1..N. */
+  print_palette?: string[] | null;
   last_error?: string | null;
 };
 

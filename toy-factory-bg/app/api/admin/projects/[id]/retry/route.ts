@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { getProject } from "@/lib/projects";
 import { retryProject } from "@/lib/production";
 export const runtime = "nodejs";
+// 3MF post-processing of a ~100 MB Meshy file takes ~10-20 s.
+export const maxDuration = 120;
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireAdmin(); const { id } = await params; const project = await getProject(id);

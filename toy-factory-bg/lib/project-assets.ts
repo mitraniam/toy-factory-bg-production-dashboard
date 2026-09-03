@@ -93,13 +93,19 @@ export async function ensureProjectAssetArchived(project: ToyProject, kind: Reco
   const remote = await fetch(sourceUrl, { cache: "no-store" });
   if (!remote.ok) throw new Error(`Could not recover legacy 3MF from Meshy (${remote.status}).`);
   const sourceBytes = new Uint8Array(await remote.arrayBuffer());
-  const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10);
+  const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10, {
+    filamentProfileSuffix: process.env.BAMBU_FILAMENT_PROFILE_SUFFIX,
+  });
   const path = await archiveBytes({
     projectId: project.id,
     bytes: resized.bytes,
     filename: "model.3mf",
     contentType: "model/3mf",
   });
-  await updateProject(project.id, { three_mf_storage_path: path, three_mf_url: sourceUrl });
+  await updateProject(project.id, {
+    three_mf_storage_path: path,
+    three_mf_url: sourceUrl,
+    ...(resized.palette.length ? { print_palette: resized.palette } : {}),
+  });
   return path;
 }

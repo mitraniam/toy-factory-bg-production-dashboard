@@ -34,25 +34,32 @@ async function archiveExactSizeThreeMf(project: ToyProject, sourceUrl: string) {
   const remote = await fetch(sourceUrl, { cache: "no-store" });
   if (!remote.ok) throw new Error(`Could not download Meshy 3MF (${remote.status}).`);
   const sourceBytes = new Uint8Array(await remote.arrayBuffer());
-  const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10);
+  const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10, {
+    filamentProfileSuffix: process.env.BAMBU_FILAMENT_PROFILE_SUFFIX,
+  });
 
   console.info("3MF exact-size postprocess", {
     projectId: project.id,
-    objectPath: resized.objectPath,
-    objectCount: resized.objectCount,
+    parts: resized.parts,
     currentHeightMm: resized.currentHeightMm,
     targetHeightMm: resized.targetHeightMm,
     scale: resized.scale,
     meshyResizeWasAccurate: resized.alreadyCorrect,
     vertexCount: resized.vertexCount,
+    palette: resized.palette,
+    retargeted: resized.retargeted,
   });
 
-  return archiveBytes({
+  const path = await archiveBytes({
     projectId: project.id,
     bytes: resized.bytes,
     filename: "model.3mf",
     contentType: "model/3mf",
   });
+  if (resized.palette.length) {
+    await updateProject(project.id, { print_palette: resized.palette }).catch(() => null);
+  }
+  return path;
 }
 
 async function freshProject(id: string, fallback: ToyProject) {

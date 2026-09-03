@@ -3,6 +3,8 @@ import { requireAdmin } from "@/lib/admin-auth";
 import { syncActiveProjects } from "@/lib/production";
 import { runWatchdog } from "@/lib/watchdog";
 export const runtime = "nodejs";
+// 3MF post-processing of a ~100 MB Meshy file takes ~10-20 s.
+export const maxDuration = 120;
 export async function POST() {
   try {
     await requireAdmin();
