@@ -76,6 +76,8 @@ export type ToyProject = {
   alert_sent_at?: string | null;
   /** Bambu filament palette (hex) extracted from the print 3MF, slot 1..N. */
   print_palette?: string[] | null;
+  /** Set once the generated files have been deleted by the retention job. */
+  assets_purged_at?: string | null;
   last_error?: string | null;
 };
 
@@ -174,6 +176,32 @@ export async function listProjectsNeedingAlert(input: { staleStatuses: ProjectSt
   params.set("order", "updated_at.asc");
   params.set("limit", "50");
   return (await supabaseRest(`toy_projects?${params.toString()}`, { method: "GET" })) as ToyProject[];
+}
+
+/** Projects whose generated files are past their retention window. */
+export async function listProjectsForRetention(input: {
+  unpaidStatuses: ProjectStatus[];
+  unpaidBefore: string;
+  closedStatuses: ProjectStatus[];
+  closedBefore: string;
+  limit: number;
+}) {
+  const params = new URLSearchParams();
+  params.set("select", "*");
+  params.set("assets_purged_at", "is.null");
+  params.set(
+    "or",
+    `(and(status.in.(${input.unpaidStatuses.join(",")}),updated_at.lt.${input.unpaidBefore}),` +
+      `and(status.in.(${input.closedStatuses.join(",")}),updated_at.lt.${input.closedBefore}))`
+  );
+  params.set("order", "updated_at.asc");
+  params.set("limit", String(input.limit));
+  return (await supabaseRest(`toy_projects?${params.toString()}`, { method: "GET" })) as ToyProject[];
+}
+
+/** Hard-deletes a project row. Only for GDPR erasure requests. */
+export async function deleteProjectRow(id: string) {
+  await supabaseRest(`toy_projects?id=eq.${encodeURIComponent(id)}`, { method: "DELETE" });
 }
 
 export async function listProjectsByOrderId(orderId: string) {

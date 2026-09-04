@@ -211,3 +211,6 @@ footer { max-width: 1280px; margin: 0 auto; padding: 42px 28px; display: flex; j
 .palette-swatch { width: 20px; height: 20px; border-radius: 6px; border: 1px solid rgba(0,0,0,.15); flex: none; }
 .palette-list b { width: 14px; text-align: right; }
 .palette-list code { font-size: 10px; color: #5c636b; }
+.admin-danger-zone { margin-top: 18px; padding-top: 14px; border-top: 1px solid #f0d9d9; }
+.admin-danger-zone label { display: block; font-size: 11px; font-weight: 800; margin: 10px 0; }
+.admin-danger-zone input { display: block; width: 100%; margin-top: 5px; padding: 9px 11px; border: 1px solid #e2e5e9; border-radius: 8px; font-size: 12px; }

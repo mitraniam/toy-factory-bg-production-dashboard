@@ -242,6 +242,49 @@ export async function fetchPrivateAsset(path: string) {
   });
 }
 
+async function deleteObjects(paths: string[]) {
+  if (!paths.length) return;
+  const { url, key, bucket } = storageConfig();
+  const response = await fetch(`${url}/storage/v1/object/${encodeURIComponent(bucket)}`, {
+    method: "DELETE",
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ prefixes: paths }),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`Could not delete Storage objects (${response.status})${body ? `: ${body}` : ""}`);
+  }
+}
+
+/**
+ * Permanently deletes one archived asset, including every chunk of a chunked
+ * upload. Missing objects are not an error — deletion must be idempotent so
+ * retention runs and GDPR erasure requests can be repeated safely.
+ */
+export async function deleteArchivedAsset(path: string) {
+  if (!isChunkedStoragePath(path)) {
+    await deleteObjects([path]);
+    return 1;
+  }
+
+  const manifestPath = path.slice(CHUNKED_PREFIX.length);
+  let parts: ChunkManifest["parts"] = [];
+  try {
+    const manifestResponse = await fetchPrivateObject(manifestPath);
+    const manifest = await manifestResponse.json().catch(() => null);
+    if (validManifest(manifest)) parts = manifest.parts;
+  } catch {
+    // Manifest already gone; still try to remove it below.
+  }
+
+  await deleteObjects([...parts.map((part) => part.path), manifestPath]);
+  return parts.length + 1;
+}
+
 export async function createSignedAssetUrl(path: string, expiresIn = 3600) {
   if (isChunkedStoragePath(path)) {
     throw new Error("Chunked assets require the temporary POPME asset proxy instead of a Supabase signed URL.");

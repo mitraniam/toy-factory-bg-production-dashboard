@@ -157,6 +157,61 @@ export function ProjectActions({
       {fulfillmentId && <p className="file-note">Shopify fulfillment: {fulfillmentId} — клиентът е уведомен с tracking.</p>}
       {notice && <p className="file-note">{notice}</p>}
       {error && <div className="admin-error-box">{error}</div>}
+      <EraseProject projectId={projectId} />
+    </div>
+  );
+}
+
+/** GDPR erasure. Irreversible, so the project id must be typed out. */
+function EraseProject({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function erase() {
+    setBusy(true);
+    setError("");
+    try {
+      await postJson(`/api/admin/projects/${projectId}/erase`, { confirm });
+      router.push("/admin/dashboard");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erase failed");
+      setBusy(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="admin-danger-zone">
+        <button className="admin-button danger-outline" onClick={() => setOpen(true)}>
+          Изтрий проекта (GDPR)
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-danger-zone">
+      <p className="file-note">
+        Изтрива преглед, GLB и 3MF от Storage и премахва реда от базата. Действието е необратимо и се използва при
+        заявка за изтриване на лични данни. Данните за поръчката в Shopify остават.
+      </p>
+      <label>
+        Въведи ID на проекта за потвърждение
+        <input value={confirm} onChange={(event) => setConfirm(event.target.value)} placeholder={projectId} />
+      </label>
+      <div className="admin-action-row">
+        <button className="admin-button danger-outline" onClick={erase} disabled={busy || confirm !== projectId}>
+          {busy ? "Изтривам…" : "Потвърди изтриването"}
+        </button>
+        <button className="admin-button secondary" onClick={() => { setOpen(false); setConfirm(""); setError(""); }} disabled={busy}>
+          Отказ
+        </button>
+      </div>
+      {error && <div className="admin-error-box">{error}</div>}
     </div>
   );
 }

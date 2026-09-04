@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/sync-production",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/retention",
+      "schedule": "30 3 * * *"
     }
   ]
 }

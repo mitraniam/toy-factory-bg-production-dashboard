@@ -407,3 +407,38 @@ Note: Meshy's raw 3MF is ~100 MB; post-processing needs up to ~1 GB RAM and
 10–20 s. Vercel functions on the Pro plan (1.7 GB default) handle it; on Hobby
 (1 GB) it may run out of memory — the project then lands in `PRINT_FILE_FAILED`
 with the raw Meshy 3MF link still available for manual scaling.
+
+## STEP 15 — Admin hardening and data retention (Phase 3)
+
+### 15.1 Migration
+
+Run `supabase/20260904-retention.sql` (adds `assets_purged_at`).
+
+### 15.2 Admin middleware
+
+`middleware.ts` rejects unauthenticated requests to `/admin/*` and
+`/api/admin/*` before they reach a handler — the per-route `requireAdmin()`
+checks stay as the primary guard, this is the safety net. `/admin` (login page)
+and the login/logout endpoints stay public.
+
+Session verification now uses Web Crypto so the same code runs in the Node
+runtime and on the Edge; `makeAdminSession()` and `verifyAdminSession()` are
+async.
+
+### 15.3 Retention
+
+A second cron (`/api/cron/retention`, daily 03:30 UTC, same `CRON_SECRET`)
+deletes the archived preview, GLB and 3MF of:
+
+- unpaid checkouts after `RETENTION_UNPAID_DAYS` (default 7);
+- shipped or cancelled orders after `RETENTION_PAID_DAYS` (default 90).
+
+Order rows are kept — accounting records must live for 10 years — and marked
+with `assets_purged_at` so they are never rescanned. Keep these values in sync
+with the periods stated in `/privacy`.
+
+### 15.4 GDPR erasure
+
+The project page has a **Изтрий проекта (GDPR)** action that deletes all
+archived files and the database row. It requires typing the project id, and is
+irreversible. Use it for data-erasure requests; the Shopify order is untouched.
