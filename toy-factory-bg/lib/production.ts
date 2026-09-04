@@ -8,7 +8,7 @@ import {
   updateProject,
 } from "@/lib/projects";
 import { archiveBytes, archiveRemoteAsset } from "@/lib/storage";
-import { resizeThreeMfToHeight } from "@/lib/three-mf";
+import { bambuTargetFromEnv, resizeThreeMfToHeight } from "@/lib/three-mf";
 
 function taskError(task: { task_error?: { message?: string } | null }, fallback: string) {
   return task.task_error?.message || fallback;
@@ -35,7 +35,7 @@ async function archiveExactSizeThreeMf(project: ToyProject, sourceUrl: string) {
   if (!remote.ok) throw new Error(`Could not download Meshy 3MF (${remote.status}).`);
   const sourceBytes = new Uint8Array(await remote.arrayBuffer());
   const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10, {
-    filamentProfileSuffix: process.env.BAMBU_FILAMENT_PROFILE_SUFFIX,
+    bambuTarget: bambuTargetFromEnv(),
   });
 
   console.info("3MF exact-size postprocess", {

@@ -1,7 +1,7 @@
 import { getMultiColorPrint, getResize, getTask } from "@/lib/meshy";
 import { ToyProject, updateProject } from "@/lib/projects";
 import { archiveBytes, archiveRemoteAsset } from "@/lib/storage";
-import { resizeThreeMfToHeight } from "@/lib/three-mf";
+import { bambuTargetFromEnv, resizeThreeMfToHeight } from "@/lib/three-mf";
 
 export type RecoverableAssetKind = "preview" | "glb" | "3mf";
 
@@ -94,7 +94,7 @@ export async function ensureProjectAssetArchived(project: ToyProject, kind: Reco
   if (!remote.ok) throw new Error(`Could not recover legacy 3MF from Meshy (${remote.status}).`);
   const sourceBytes = new Uint8Array(await remote.arrayBuffer());
   const resized = resizeThreeMfToHeight(sourceBytes, project.size_cm * 10, {
-    filamentProfileSuffix: process.env.BAMBU_FILAMENT_PROFILE_SUFFIX,
+    bambuTarget: bambuTargetFromEnv(),
   });
   const path = await archiveBytes({
     projectId: project.id,

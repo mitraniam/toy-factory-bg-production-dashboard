@@ -390,14 +390,18 @@ The archived 3MF is a Bambu Studio project: geometry with per-triangle filament
 painting plus 8 filament slots with their colours. Always open it with
 **File → Open Project** (not Import / drag-and-drop as geometry).
 
-If the whole model shows in one colour (Bambu's default green), Bambu Studio has
-replaced the file's filament presets because they were written for a different
-printer model. Two fixes:
+If the whole model shows in one colour and only one filament is listed, Bambu
+Studio discarded the file's project config: Meshy writes no `printer_model` /
+`nozzle_diameter`, so Bambu loads geometry only.
 
-1. Set `BAMBU_FILAMENT_PROFILE_SUFFIX` in Vercel to your printer (e.g. `@BBL A1`)
-   and regenerate/retry the 3MF — new files then open with the right presets.
-2. For an existing file: in Bambu Studio's filament list set the 8 slot colours
-   to the palette shown on the project page in the dashboard (slot 1 → colour 1, …).
+Fix: set `BAMBU_PRINTER_MODEL` in Vercel (plus `BAMBU_PROFILE_CODE` and
+`BAMBU_NOZZLE_DIAMETER` if the derived values are wrong — see `.env.example`)
+and regenerate the 3MF. The post-processor then writes your printer's system
+preset names into `project_settings.config` and the file opens with every
+filament slot and the painted colours.
+
+For a file generated before this was configured, set the slot colours by hand
+from the palette shown on the project page in the dashboard.
 
 Note: Meshy's raw 3MF is ~100 MB; post-processing needs up to ~1 GB RAM and
 10–20 s. Vercel functions on the Pro plan (1.7 GB default) handle it; on Hobby

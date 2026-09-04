@@ -146,28 +146,87 @@ export function readFilamentPalette(archive: Record<string, Uint8Array>): string
   }
 }
 
+/** Bambu Studio preset names the 3MF should open with. */
+export type BambuTarget = {
+  /** Vendor model name exactly as Bambu Studio shows it, e.g. "Bambu Lab A1". */
+  printerModel: string;
+  /** Profile code used in system preset names: A1, A1M, P1P, P1S, X1C, X1E, H2D. */
+  profileCode: string;
+  nozzleDiameter: string;
+  /** Optional explicit preset names; derived from the fields above when omitted. */
+  printerSettingsId?: string;
+  printSettingsId?: string;
+  filamentSettingsId?: string;
+};
+
+export function bambuTargetFromEnv(env: NodeJS.ProcessEnv = process.env): BambuTarget | null {
+  const printerModel = env.BAMBU_PRINTER_MODEL?.trim();
+  if (!printerModel) return null;
+  const derivedCode = printerModel
+    .replace(/^Bambu Lab\s*/i, "")
+    .replace(/\s+mini$/i, "M")
+    .replace(/\s+/g, "");
+  return {
+    printerModel,
+    profileCode: env.BAMBU_PROFILE_CODE?.trim() || derivedCode,
+    nozzleDiameter: env.BAMBU_NOZZLE_DIAMETER?.trim() || "0.4",
+    printerSettingsId: env.BAMBU_PRINTER_SETTINGS_ID?.trim() || undefined,
+    printSettingsId: env.BAMBU_PRINT_SETTINGS_ID?.trim() || undefined,
+    filamentSettingsId: env.BAMBU_FILAMENT_SETTINGS_ID?.trim() || undefined,
+  };
+}
+
 /**
- * Optionally retargets the Bambu filament presets to the operator's printer
- * (e.g. "@BBL A1" instead of Meshy's default "@BBL X1C"). When Bambu Studio
- * opens a project whose filament presets do not match the active printer it
- * resets every slot to the default filament — which shows the whole model in
- * one color. Set BAMBU_FILAMENT_PROFILE_SUFFIX to avoid that.
+ * Makes Metadata/project_settings.config a config Bambu Studio will actually
+ * load.
+ *
+ * Meshy writes only the filament palette and wipe-tower keys — no
+ * `printer_model`, no `nozzle_diameter`. Bambu Studio rejects such a config
+ * (Plater.cpp: is_bbl_vendor_config + check_project_config), falls back to
+ * "load geometry only", and the model then shows with a single default
+ * filament: the whole figure in one colour, even though the per-triangle
+ * paint data is intact.
+ *
+ * Writing the system preset names for the operator's printer lets Bambu select
+ * those presets outright, so the project opens on the right machine with every
+ * filament slot and its colour attached.
  */
-function retargetFilamentPresets(archive: Record<string, Uint8Array>, suffix: string | undefined) {
-  if (!suffix) return false;
+function retargetBambuProject(archive: Record<string, Uint8Array>, target: BambuTarget | null | undefined) {
+  if (!target) return false;
   const bytes = archive["Metadata/project_settings.config"];
   if (!bytes) return false;
-  const text = strFromU8(bytes);
-  const updated = text.replace(/@BBL [A-Z0-9 ]+"/g, `${suffix.trim()}"`);
-  if (updated === text) return false;
-  archive["Metadata/project_settings.config"] = strToU8(updated);
+
+  let json: Record<string, unknown>;
+  try {
+    json = JSON.parse(strFromU8(bytes));
+  } catch {
+    return false;
+  }
+
+  const colours = Array.isArray(json.filament_colour) ? (json.filament_colour as unknown[]) : [];
+  const filamentCount = Math.max(colours.length, 1);
+  const code = target.profileCode;
+
+  json.printer_model = target.printerModel;
+  json.printer_variant = target.nozzleDiameter;
+  json.nozzle_diameter = [target.nozzleDiameter];
+  json.printer_settings_id = target.printerSettingsId || `${target.printerModel} ${target.nozzleDiameter} nozzle`;
+  json.print_settings_id = target.printSettingsId || `0.20mm Standard @BBL ${code}`;
+  const filamentPreset = target.filamentSettingsId || `Bambu PLA Basic @BBL ${code}`;
+  json.filament_settings_id = Array.from({ length: filamentCount }, () => filamentPreset);
+  // One entry for print + one per filament + one for printer.
+  // Empty string = "identical to the system preset", so Bambu takes the system values.
+  json.different_settings_to_system = Array.from({ length: filamentCount + 2 }, () => "");
+  json.inherits_group = Array.from({ length: filamentCount + 2 }, () => "");
+
+  archive["Metadata/project_settings.config"] = strToU8(JSON.stringify(json, null, 4));
   return true;
 }
 
 export function resizeThreeMfToHeight(
   input: Uint8Array,
   targetHeightMm: number,
-  options: { filamentProfileSuffix?: string } = {}
+  options: { bambuTarget?: BambuTarget | null } = {}
 ) {
   if (!Number.isFinite(targetHeightMm) || targetHeightMm <= 0) {
     throw new Error("Invalid 3MF target height.");
@@ -209,7 +268,7 @@ export function resizeThreeMfToHeight(
   }
   xmlByPath.clear();
 
-  const retargeted = retargetFilamentPresets(archive, options.filamentProfileSuffix);
+  const retargeted = retargetBambuProject(archive, options.bambuTarget);
   const palette = readFilamentPalette(archive);
   const output = zipSync(archive, { level: 6 });
 
